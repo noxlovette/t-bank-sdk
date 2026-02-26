@@ -1,0 +1,20 @@
+[package]
+name = "t-bank-sdk"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+chrono = { version = "0", features = ["serde"] }
+reqwest = { version = "0", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+strum = { version = "0", features = ["derive"] }
+thiserror = "2"
+uuid = { version = "1", features = ["serde"] }
+validator = { version = "0", features = ["derive"] }
+anyhow = "1.0"
+jsonwebtoken = { version = "10", features = ["rust_crypto"] }
+tracing-subscriber = "0.3.22"
+
+[dev-dependencies]
+dotenvy = "0"
+tokio = { version = "1", features = ["full"] }
