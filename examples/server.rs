@@ -1,4 +1,4 @@
-use axum::{Router, extract::State, routing::post};
+use axum::{Json, Router, extract::State, routing::post};
 use t_bank_sdk::{Client, CreateToken, Error, InitPaymentReq, InitPaymentRes};
 
 #[tokio::main]
@@ -17,12 +17,24 @@ struct AppState {
 }
 
 #[axum::debug_handler]
-async fn test_payment(State(state): State<AppState>) -> Result<InitPaymentRes, Error> {
+async fn test_payment(State(state): State<AppState>) -> Result<Json<InitPaymentRes>, Error> {
     let req = InitPaymentReq::new(&state.client.terminal_key(), 1000, "order-1", "token")
         .unwrap()
         .create_token(&state.client.password());
 
     let res = state.client.initiate_payment(req).await?;
 
-    Ok(res)
+    Ok(Json(res))
+}
+
+impl IntoResponse for Error {
+    fn into_response(self) -> axum::response::Response {
+        let (status, message) = match self {
+            Self::Api(ref err) => (StatusCode::BAD_REQUEST, err.to_string()),
+            Self::Config(ref err) => (StatusCode::SERVICE_UNAVAILABLE, err.to_string()),
+            Self::Server(ref err) => (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()),
+        };
+
+        (status, message).into_response()
+    }
 }

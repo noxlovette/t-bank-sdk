@@ -54,14 +54,11 @@ pub struct Client {
 /// Requirements: <= 20 characters
 ///
 /// Идентификатор терминала. Выдается мерчанту в Т‑Бизнес при заведении терминала.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, Default)]
+#[serde(transparent)]
 pub struct TerminalKey(String);
 
 impl TerminalKey {
-    pub(crate) fn new(value: String) -> Self {
-        Self(value)
-    }
-
     /// Gets and validates the terminal key from the environment
     fn from_env() -> Result<Self, Error> {
         let tk = std::env::var("TERMINAL_ID")

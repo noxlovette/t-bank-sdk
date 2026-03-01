@@ -1,3 +1,6 @@
+use axum::response::IntoResponse;
+use reqwest::StatusCode;
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("configuration error: {0}")]

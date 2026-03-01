@@ -15,8 +15,6 @@ pub struct InitPaymentReq {
     ///
     /// Параметр должен быть равен сумме всех параметров Amount, переданных в объекте Items.
     /// Минимальная сумма операции с помощью СБП составляет 10 руб.
-    ///
-    /// P.S. I'm not sure anyone will pay more than 42 949 672,96 RUB with this
     pub amount: u32,
     /// Идентификатор заказа в системе мерчанта. Должен быть уникальным для каждой операции.
     pub order_id: String,
@@ -73,7 +71,7 @@ pub struct InitPaymentReq {
 }
 
 /// Ответ инициатора платежа
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 #[serde(rename_all = "PascalCase")]
 pub struct InitPaymentRes {
     pub terminal_key: TerminalKey,
@@ -91,7 +89,6 @@ pub struct InitPaymentRes {
     ///
     /// Статус транзакции.
     pub status: String,
-
     /// Requirements: <= 20 characters
     ///
     /// Идентификатор платежа в системе Т‑Бизнес.
