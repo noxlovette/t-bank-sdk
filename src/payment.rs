@@ -6,10 +6,16 @@ use std::{
     num::NonZeroU32,
 };
 use url::Url;
-use validator::Validate;
+
+const TERMINAL_KEY_MAX_LEN: usize = 20;
+const ORDER_ID_MAX_LEN: usize = 36;
+const DESCRIPTION_MAX_LEN: usize = 140;
+const CUSTOMER_KEY_MAX_LEN: usize = 36;
+const REDIRECT_DUE_DATE_MINUTES: i64 = 1;
+const REDIRECT_DUE_DATE_MAX_DAYS: i64 = 90;
 
 /// Запрос для инициации платежа
-#[derive(Serialize, Validate)]
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct InitPaymentReq {
     pub terminal_key: TerminalKey,
@@ -32,7 +38,7 @@ pub struct InitPaymentReq {
 }
 
 /// Ответ инициатора платежа
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct InitPaymentRes {
     terminal_key: TerminalKey,
@@ -45,6 +51,216 @@ pub struct InitPaymentRes {
     payment_url: Option<Url>,
     message: Option<String>,
     details: Option<String>,
+}
+
+/// Ошибка валидации параметров запроса на инициацию платежа.
+#[derive(Debug, thiserror::Error)]
+pub enum InitPaymentReqError {
+    #[error("{field} must not be empty")]
+    Empty { field: &'static str },
+
+    #[error("{field} must be at most {max} characters, got {actual}")]
+    TooLong {
+        field: &'static str,
+        max: usize,
+        actual: usize,
+    },
+
+    #[error("Amount must be greater than 0")]
+    AmountMustBePositive,
+
+    #[error("Recurrent must be \"Y\"")]
+    InvalidRecurrent,
+
+    #[error("RedirectDueDate must be between {min_minutes} minute and {max_days} days from now")]
+    InvalidRedirectDueDate { min_minutes: i64, max_days: i64 },
+
+    #[error("{field} is not a valid URL: {source}")]
+    InvalidUrl {
+        field: &'static str,
+        #[source]
+        source: url::ParseError,
+    },
+}
+
+impl InitPaymentReq {
+    /// Создает запрос с обязательными полями.
+    ///
+    /// `data`, `receipt` и `shops` пока не настраиваются через builder API.
+    pub fn new(
+        terminal_key: impl Into<String>,
+        amount: u32,
+        order_id: impl Into<String>,
+        token: impl Into<String>,
+    ) -> Result<Self, InitPaymentReqError> {
+        Ok(Self {
+            terminal_key: validate_string(
+                "TerminalKey",
+                terminal_key.into(),
+                TERMINAL_KEY_MAX_LEN,
+                TerminalKey::new,
+            )?,
+            amount: validate_amount(amount)?,
+            order_id: validate_string("OrderId", order_id.into(), ORDER_ID_MAX_LEN, OrderId)?,
+            token: Token(token.into()),
+            description: None,
+            customer_key: None,
+            recurrent: None,
+            pay_type: None,
+            language: None,
+            notification_url: None,
+            success_url: None,
+            fail_url: None,
+            redirect_due_date: None,
+            data: None,
+            receipt: None,
+            shops: Vec::new(),
+        })
+    }
+
+    /// Устанавливает описание заказа.
+    pub fn description(
+        mut self,
+        description: impl Into<String>,
+    ) -> Result<Self, InitPaymentReqError> {
+        self.description = Some(validate_string(
+            "Description",
+            description.into(),
+            DESCRIPTION_MAX_LEN,
+            Description,
+        )?);
+        Ok(self)
+    }
+
+    /// Устанавливает идентификатор покупателя.
+    pub fn customer_key(
+        mut self,
+        customer_key: impl Into<String>,
+    ) -> Result<Self, InitPaymentReqError> {
+        self.customer_key = Some(validate_string(
+            "CustomerKey",
+            customer_key.into(),
+            CUSTOMER_KEY_MAX_LEN,
+            CustomerKey,
+        )?);
+        Ok(self)
+    }
+
+    /// Включает сохранение реквизитов карты покупателя.
+    pub fn recurrent(mut self) -> Self {
+        self.recurrent = Some(Recurrent(String::from("Y")));
+        self
+    }
+
+    /// Устанавливает явное значение признака рекуррентного платежа.
+    pub fn recurrent_value(
+        mut self,
+        recurrent: impl Into<String>,
+    ) -> Result<Self, InitPaymentReqError> {
+        let recurrent = recurrent.into();
+        if recurrent != "Y" {
+            return Err(InitPaymentReqError::InvalidRecurrent);
+        }
+
+        self.recurrent = Some(Recurrent(recurrent));
+        Ok(self)
+    }
+
+    /// Устанавливает тип проведения платежа.
+    pub fn pay_type(mut self, pay_type: PayType) -> Self {
+        self.pay_type = Some(pay_type);
+        self
+    }
+
+    /// Устанавливает язык платежной формы.
+    pub fn language(mut self, language: Language) -> Self {
+        self.language = Some(language);
+        self
+    }
+
+    /// Устанавливает URL для уведомлений.
+    pub fn notification_url(
+        mut self,
+        notification_url: impl AsRef<str>,
+    ) -> Result<Self, InitPaymentReqError> {
+        self.notification_url = Some(NotificationUrl(parse_url(
+            "NotificationUrl",
+            notification_url.as_ref(),
+        )?));
+        Ok(self)
+    }
+
+    /// Устанавливает URL для возврата после успешной оплаты.
+    pub fn success_url(
+        mut self,
+        success_url: impl AsRef<str>,
+    ) -> Result<Self, InitPaymentReqError> {
+        self.success_url = Some(SuccessUrl(parse_url("SuccessUrl", success_url.as_ref())?));
+        Ok(self)
+    }
+
+    /// Устанавливает URL для возврата после неуспешной оплаты.
+    pub fn fail_url(mut self, fail_url: impl AsRef<str>) -> Result<Self, InitPaymentReqError> {
+        self.fail_url = Some(FailUrl(parse_url("FailUrl", fail_url.as_ref())?));
+        Ok(self)
+    }
+
+    /// Устанавливает срок жизни ссылки или QR-кода СБП.
+    pub fn redirect_due_date(
+        mut self,
+        redirect_due_date: DateTime<Utc>,
+    ) -> Result<Self, InitPaymentReqError> {
+        validate_redirect_due_date(redirect_due_date)?;
+        self.redirect_due_date = Some(redirect_due_date);
+        Ok(self)
+    }
+}
+
+fn validate_string<T>(
+    field: &'static str,
+    value: String,
+    max_len: usize,
+    make: impl FnOnce(String) -> T,
+) -> Result<T, InitPaymentReqError> {
+    if value.is_empty() {
+        return Err(InitPaymentReqError::Empty { field });
+    }
+
+    let actual = value.chars().count();
+    if actual > max_len {
+        return Err(InitPaymentReqError::TooLong {
+            field,
+            max: max_len,
+            actual,
+        });
+    }
+
+    Ok(make(value))
+}
+
+fn validate_amount(amount: u32) -> Result<Amount, InitPaymentReqError> {
+    NonZeroU32::new(amount)
+        .map(Amount)
+        .ok_or(InitPaymentReqError::AmountMustBePositive)
+}
+
+fn parse_url(field: &'static str, value: &str) -> Result<Url, InitPaymentReqError> {
+    Url::parse(value).map_err(|source| InitPaymentReqError::InvalidUrl { field, source })
+}
+
+fn validate_redirect_due_date(redirect_due_date: DateTime<Utc>) -> Result<(), InitPaymentReqError> {
+    let now = Utc::now();
+    let min = now + chrono::Duration::minutes(REDIRECT_DUE_DATE_MINUTES);
+    let max = now + chrono::Duration::days(REDIRECT_DUE_DATE_MAX_DAYS);
+
+    if redirect_due_date < min || redirect_due_date > max {
+        return Err(InitPaymentReqError::InvalidRedirectDueDate {
+            min_minutes: REDIRECT_DUE_DATE_MINUTES,
+            max_days: REDIRECT_DUE_DATE_MAX_DAYS,
+        });
+    }
+
+    Ok(())
 }
 
 /// JSON-объект с дополнительными параметрами по операции и настройками в формате ключ:значение.
@@ -151,6 +367,12 @@ newtype! {
 newtype! {
     /// Подпись запроса. [Как сформировать.](https://developer.tbank.ru/eacq/intro/developer/token)
     pub struct Token(String);
+}
+
+impl Token {
+    pub(crate) fn new(value: String) -> Self {
+        Self(value)
+    }
 }
 
 newtype! {
@@ -311,7 +533,10 @@ newtype! {
     struct PaymentId(String);
 }
 
+#[cfg(test)]
 mod test {
+    use super::*;
+    use chrono::Duration;
 
     #[test]
     fn parse_request() {
@@ -323,5 +548,61 @@ mod test {
     #[test]
     fn parse_response() {
         let json = r#"{"Success":true,"ErrorCode":"0","TerminalKey":"TBankTest","Status":"NEW","PaymentId":"3093639567","OrderId":"21090","Amount":140000,"PaymentURL":"https://pay.tbank.ru/new/fU1ppgqa"}"#;
+    }
+
+    #[test]
+    fn builder_accepts_valid_values() {
+        let redirect_due_date = Utc::now() + Duration::minutes(5);
+
+        let req = InitPaymentReq::new("terminal", 100, "order-1", "token")
+            .unwrap()
+            .description("test description")
+            .unwrap()
+            .customer_key("customer-1")
+            .unwrap()
+            .recurrent()
+            .pay_type(PayType::O)
+            .language(Language::Ru)
+            .notification_url("https://example.com/notification")
+            .unwrap()
+            .success_url("https://example.com/success")
+            .unwrap()
+            .fail_url("https://example.com/fail")
+            .unwrap()
+            .redirect_due_date(redirect_due_date)
+            .unwrap();
+
+        assert_eq!(req.terminal_key.to_string(), "terminal");
+        assert_eq!(req.amount.to_string(), "100");
+        assert_eq!(req.order_id.to_string(), "order-1");
+        assert_eq!(req.token.to_string(), "token");
+        assert_eq!(req.description.unwrap().to_string(), "test description");
+        assert_eq!(req.customer_key.unwrap().to_string(), "customer-1");
+        assert_eq!(req.recurrent.unwrap().to_string(), "Y");
+        assert!(req.data.is_none());
+        assert!(req.receipt.is_none());
+        assert!(req.shops.is_empty());
+    }
+
+    #[test]
+    fn builder_rejects_invalid_values() {
+        assert!(matches!(
+            InitPaymentReq::new("", 100, "order-1", "token"),
+            Err(InitPaymentReqError::Empty {
+                field: "TerminalKey"
+            })
+        ));
+
+        assert!(matches!(
+            InitPaymentReq::new("terminal", 0, "order-1", "token"),
+            Err(InitPaymentReqError::AmountMustBePositive)
+        ));
+
+        assert!(matches!(
+            InitPaymentReq::new("terminal", 100, "order-1", "token")
+                .unwrap()
+                .recurrent_value("N"),
+            Err(InitPaymentReqError::InvalidRecurrent)
+        ));
     }
 }

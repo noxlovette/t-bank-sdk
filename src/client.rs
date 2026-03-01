@@ -51,6 +51,10 @@ newtype! {
 }
 
 impl TerminalKey {
+    pub(crate) fn new(value: String) -> Self {
+        Self(value)
+    }
+
     /// Gets and validates the terminal key from the environment
     fn from_env() -> Result<Self, Error> {
         let tk = std::env::var("TERMINAL_KEY")
