@@ -2,6 +2,15 @@ use crate::{Amount, newtype};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::num::NonZeroU16;
+use strum::Display;
+
+const MAX_RECEIPT_ITEMS: usize = 100;
+const ITEM_NAME_MAX_LEN: usize = 128;
+const ITEM_QUANTITY_MAX_LEN: usize = 8;
+const ITEM_AMOUNT_MAX_LEN: usize = 10;
+const RECEIPT_CONTACT_MAX_LEN: usize = 64;
+const EAN13_MAX_LEN: usize = 300;
+const PAYMENT_MAX_LEN: usize = 14;
 
 /// JSON-объект с данными чека. Параметр обязательный, если подключена онлайн-касса.
 #[derive(Serialize, Deserialize, Debug)]
@@ -43,9 +52,9 @@ struct ItemFFD105 {
     payment_method: PaymentMethod,
     payment_object: PaymentObjectFF105,
     tax: Tax,
-    ean_13: Ean13,
-    agent_data: AgentData,
-    supplier_info: SupplierInfo,
+    ean_13: Option<Ean13>,
+    agent_data: Option<AgentData>,
+    supplier_info: Option<SupplierInfo>,
 }
 
 /// Позиция чека с информацией о товарах.
@@ -144,6 +153,259 @@ pub struct Payments {
     advance_payment: Option<AdvancePayment>,
     credit: Option<Credit>,
     provision: Option<Provision>,
+}
+
+/// Error while building receipt payloads.
+#[derive(Debug, thiserror::Error)]
+pub enum ReceiptError {
+    /// A string field was empty.
+    #[error("{field} must not be empty")]
+    Empty { field: &'static str },
+
+    /// A string or numeric field exceeded its documented maximum length.
+    #[error("{field} must be at most {max} characters, got {actual}")]
+    TooLong {
+        field: &'static str,
+        max: usize,
+        actual: usize,
+    },
+
+    /// A numeric field must be greater than zero.
+    #[error("{field} must be greater than 0")]
+    MustBePositive { field: &'static str },
+
+    /// Receipts require at least one item.
+    #[error("receipt must contain at least one item")]
+    EmptyItems,
+
+    /// Receipts may contain at most 100 items.
+    #[error("receipt must contain at most {max} items, got {actual}")]
+    TooManyItems { max: usize, actual: usize },
+
+    /// Either email or phone must be provided.
+    #[error("either Email or Phone must be provided")]
+    MissingContact,
+
+    /// Multiplying price by quantity overflowed `u32`.
+    #[error("receipt item amount overflowed u32")]
+    AmountOverflow,
+
+    /// Explicit payments did not match the sum of receipt items.
+    #[error("payments total must equal the sum of receipt item amounts")]
+    PaymentsTotalMismatch,
+}
+
+/// Builder-friendly receipt item for FFD 1.05.
+#[derive(Debug)]
+pub struct ReceiptItem105 {
+    inner: ItemFFD105,
+}
+
+/// Builder for `Receipt::FFD105`.
+#[derive(Debug)]
+pub struct ReceiptBuilder105 {
+    items: Vec<ReceiptItem105>,
+    ffd_version: Option<FfdVersion>,
+    email: Option<ReceiptEmail>,
+    phone: Option<ReceiptPhone>,
+    taxation: Taxation,
+    payments: Option<Payments>,
+}
+
+impl Payments {
+    /// Creates a payments object with the required `Electronic` amount.
+    pub fn new(electronic: u32) -> Result<Self, ReceiptError> {
+        Ok(Self {
+            electronic: Electronic(validate_payment_amount("Electronic", electronic)?),
+            cash: None,
+            advance_payment: None,
+            credit: None,
+            provision: None,
+        })
+    }
+
+    /// Sets the `Cash` payment amount.
+    pub fn cash(mut self, cash: u32) -> Result<Self, ReceiptError> {
+        self.cash = Some(Cash(validate_payment_amount("Cash", cash)?));
+        Ok(self)
+    }
+
+    /// Sets the `AdvancePayment` amount.
+    pub fn advance_payment(mut self, advance_payment: u32) -> Result<Self, ReceiptError> {
+        self.advance_payment = Some(AdvancePayment(validate_payment_amount(
+            "AdvancePayment",
+            advance_payment,
+        )?));
+        Ok(self)
+    }
+
+    /// Sets the `Credit` amount.
+    pub fn credit(mut self, credit: u32) -> Result<Self, ReceiptError> {
+        self.credit = Some(Credit(validate_payment_amount("Credit", credit)?));
+        Ok(self)
+    }
+
+    /// Sets the `Provision` amount.
+    pub fn provision(mut self, provision: u32) -> Result<Self, ReceiptError> {
+        self.provision = Some(Provision(validate_payment_amount("Provision", provision)?));
+        Ok(self)
+    }
+
+    fn total(&self) -> u32 {
+        let mut total = self.electronic.0.get();
+        if let Some(value) = &self.cash {
+            total += value.0.get();
+        }
+        if let Some(value) = &self.advance_payment {
+            total += value.0.get();
+        }
+        if let Some(value) = &self.credit {
+            total += value.0.get();
+        }
+        if let Some(value) = &self.provision {
+            total += value.0.get();
+        }
+        total
+    }
+}
+
+impl ReceiptItem105 {
+    /// Creates an FFD 1.05 receipt item with required fields.
+    pub fn new(
+        name: impl Into<String>,
+        price: u32,
+        quantity: u16,
+        tax: Tax,
+    ) -> Result<Self, ReceiptError> {
+        let name = validate_string("Name", name.into(), ITEM_NAME_MAX_LEN, ItemName)?;
+        let price_amount = validate_amount_with_len("Price", price, ITEM_AMOUNT_MAX_LEN)?;
+        let quantity = validate_quantity(quantity)?;
+        let amount = compute_item_amount(&price_amount, &quantity)?;
+
+        Ok(Self {
+            inner: ItemFFD105 {
+                name,
+                price: ItemPrice(price_amount),
+                quantity: ItemQuantity(quantity),
+                amount: ItemAmount(amount),
+                payment_method: PaymentMethod::default(),
+                payment_object: PaymentObjectFF105::default(),
+                tax,
+                ean_13: None,
+                agent_data: None,
+                supplier_info: None,
+            },
+        })
+    }
+
+    /// Overrides the default payment method.
+    pub fn payment_method(mut self, payment_method: PaymentMethod) -> Self {
+        self.inner.payment_method = payment_method;
+        self
+    }
+
+    /// Overrides the default payment object.
+    pub fn payment_object(mut self, payment_object: PaymentObjectFF105) -> Self {
+        self.inner.payment_object = payment_object;
+        self
+    }
+
+    /// Sets the optional `Ean13` field.
+    pub fn ean_13(mut self, ean_13: impl Into<String>) -> Result<Self, ReceiptError> {
+        self.inner.ean_13 = Some(validate_string(
+            "Ean13",
+            ean_13.into(),
+            EAN13_MAX_LEN,
+            Ean13,
+        )?);
+        Ok(self)
+    }
+
+    fn amount(&self) -> u32 {
+        self.inner.amount.0.get()
+    }
+}
+
+impl Receipt {
+    /// Starts building an FFD 1.05 receipt.
+    pub fn ffd105(
+        items: Vec<ReceiptItem105>,
+        taxation: Taxation,
+    ) -> Result<ReceiptBuilder105, ReceiptError> {
+        validate_items_len(items.len())?;
+
+        Ok(ReceiptBuilder105 {
+            items,
+            ffd_version: None,
+            email: None,
+            phone: None,
+            taxation,
+            payments: None,
+        })
+    }
+}
+
+impl ReceiptBuilder105 {
+    /// Sets the optional FFD version.
+    pub fn ffd_version(mut self, ffd_version: FfdVersion) -> Self {
+        self.ffd_version = Some(ffd_version);
+        self
+    }
+
+    /// Sets the customer email.
+    pub fn email(mut self, email: impl Into<String>) -> Result<Self, ReceiptError> {
+        self.email = Some(ReceiptEmail(validate_string(
+            "Email",
+            email.into(),
+            RECEIPT_CONTACT_MAX_LEN,
+            Email,
+        )?));
+        Ok(self)
+    }
+
+    /// Sets the customer phone.
+    pub fn phone(mut self, phone: impl Into<String>) -> Result<Self, ReceiptError> {
+        self.phone = Some(ReceiptPhone(validate_string(
+            "Phone",
+            phone.into(),
+            RECEIPT_CONTACT_MAX_LEN,
+            Phone,
+        )?));
+        Ok(self)
+    }
+
+    /// Overrides the default payments object.
+    pub fn payments(mut self, payments: Payments) -> Self {
+        self.payments = Some(payments);
+        self
+    }
+
+    /// Builds the final receipt.
+    pub fn build(self) -> Result<Receipt, ReceiptError> {
+        if self.email.is_none() && self.phone.is_none() {
+            return Err(ReceiptError::MissingContact);
+        }
+
+        let items_total: u32 = self.items.iter().map(ReceiptItem105::amount).sum();
+        let payments = match self.payments {
+            Some(payments) => {
+                if payments.total() != items_total {
+                    return Err(ReceiptError::PaymentsTotalMismatch);
+                }
+                payments
+            }
+            None => Payments::new(items_total)?,
+        };
+
+        Ok(Receipt::FFD105 {
+            items: ReceiptItemsFFD105(self.items.into_iter().map(|item| item.inner).collect()),
+            ffd_version: self.ffd_version,
+            email: self.email,
+            phone: self.phone,
+            taxation: self.taxation,
+            payments,
+        })
+    }
 }
 
 /// Requirements: [bank_paying_agent, bank_paying_subagent, paying_agent, paying_subagent, attorney, commission_agent, another]
@@ -327,7 +589,7 @@ pub enum MeasurementUnit {
 /// Если значение не передано, по умолчанию в онлайн-кассу отправляется признак предмета расчета full_payment.
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "snake_case")]
-enum PaymentMethod {
+pub enum PaymentMethod {
     FullPrepayment,
     Prepayment,
     Advance,
@@ -362,7 +624,7 @@ enum PaymentMethod {
 /// Если значение не передано, по умолчанию в онлайн-кассу отправляется признак предмета расчета commodity.
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "snake_case")]
-enum PaymentObjectFF105 {
+pub enum PaymentObjectFF105 {
     #[default]
     Commodity,
     Excise,
@@ -416,7 +678,7 @@ enum PaymentObjectFF105 {
 /// - goods_without_marking_code — ТНМ;
 /// - goods_with_marking_code — ТМ;
 /// - another — иной предмет расчета.
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, Display)]
 #[serde(rename_all = "snake_case")]
 enum PaymentObjectFF12 {
     #[default]
@@ -471,9 +733,9 @@ enum PaymentObjectFF12 {
 /// - vat110 — НДС чека по расчетной ставке 10/110;
 /// - vat120 — НДС чека по расчетной ставке 20/120;
 /// - vat122 — НДС чека по расчетной ставке 22/122 (с 01.01.2026).
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Display)]
 #[serde(rename_all = "lowercase")]
-enum Tax {
+pub enum Tax {
     None,
     Vat0,
     Vat5,
@@ -567,12 +829,102 @@ enum DocumentCode {
 ///
 /// Версия ФФД.
 #[derive(Serialize, Deserialize, Debug, Default)]
-enum FfdVersion {
+pub enum FfdVersion {
     #[serde(rename = "1.2")]
     V12,
     #[default]
     #[serde(rename = "1.05")]
     V105,
+}
+
+fn validate_string<T>(
+    field: &'static str,
+    value: String,
+    max_len: usize,
+    make: impl FnOnce(String) -> T,
+) -> Result<T, ReceiptError> {
+    if value.is_empty() {
+        return Err(ReceiptError::Empty { field });
+    }
+
+    let actual = value.chars().count();
+    if actual > max_len {
+        return Err(ReceiptError::TooLong {
+            field,
+            max: max_len,
+            actual,
+        });
+    }
+
+    Ok(make(value))
+}
+
+fn validate_amount_with_len(
+    field: &'static str,
+    value: u32,
+    max_len: usize,
+) -> Result<Amount, ReceiptError> {
+    if value == 0 {
+        return Err(ReceiptError::MustBePositive { field });
+    }
+
+    let actual = value.to_string().len();
+    if actual > max_len {
+        return Err(ReceiptError::TooLong {
+            field,
+            max: max_len,
+            actual,
+        });
+    }
+
+    Amount::new(value).ok_or(ReceiptError::MustBePositive { field })
+}
+
+fn validate_payment_amount(field: &'static str, value: u32) -> Result<Amount, ReceiptError> {
+    validate_amount_with_len(field, value, PAYMENT_MAX_LEN)
+}
+
+fn validate_quantity(value: u16) -> Result<Quantity, ReceiptError> {
+    if value == 0 {
+        return Err(ReceiptError::MustBePositive { field: "Quantity" });
+    }
+
+    let actual = value.to_string().len();
+    if actual > ITEM_QUANTITY_MAX_LEN {
+        return Err(ReceiptError::TooLong {
+            field: "Quantity",
+            max: ITEM_QUANTITY_MAX_LEN,
+            actual,
+        });
+    }
+
+    NonZeroU16::new(value)
+        .map(Quantity)
+        .ok_or(ReceiptError::MustBePositive { field: "Quantity" })
+}
+
+fn compute_item_amount(price: &Amount, quantity: &Quantity) -> Result<Amount, ReceiptError> {
+    let total = price
+        .get()
+        .checked_mul(u32::from(quantity.0.get()))
+        .ok_or(ReceiptError::AmountOverflow)?;
+
+    validate_amount_with_len("Amount", total, ITEM_AMOUNT_MAX_LEN)
+}
+
+fn validate_items_len(actual: usize) -> Result<(), ReceiptError> {
+    if actual == 0 {
+        return Err(ReceiptError::EmptyItems);
+    }
+
+    if actual > MAX_RECEIPT_ITEMS {
+        return Err(ReceiptError::TooManyItems {
+            max: MAX_RECEIPT_ITEMS,
+            actual,
+        });
+    }
+
+    Ok(())
 }
 
 newtype! {
@@ -615,37 +967,37 @@ newtype! {
     struct ItemTax(Tax);
 }
 
-newtype! {
-    /// Тег ФФД: 1073
-    ///
-    /// Телефоны платежного агента в формате +{Ц}.
-    ///
-    /// Параметр обязательный, если AgentSign передан в значениях:
-    ///
-    /// - bank_paying_agent;
-    /// - bank_paying_subagent;
-    /// - paying_agent;
-    /// - paying_subagent.
-    struct AgentPhones(Vec<Phone>);
-}
+/// Тег ФФД: 1073
+///
+/// Телефоны платежного агента в формате +{Ц}.
+///
+/// Параметр обязательный, если AgentSign передан в значениях:
+///
+/// - bank_paying_agent;
+/// - bank_paying_subagent;
+/// - paying_agent;
+/// - paying_subagent.
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(transparent)]
+struct AgentPhones(Vec<Phone>);
 
-newtype! {
-    /// Тег ФФД: 1074
-    ///
-    /// Телефоны оператора по приему платежей в формате +{Ц}.
-    ///
-    /// Параметр обязательный, если AgentSign передан в значениях paying_agent или paying_subagent.
-    struct ReceiverPhones(Vec<Phone>);
-}
+/// Тег ФФД: 1074
+///
+/// Телефоны оператора по приему платежей в формате +{Ц}.
+///
+/// Параметр обязательный, если AgentSign передан в значениях paying_agent или paying_subagent.
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(transparent)]
+struct ReceiverPhones(Vec<Phone>);
 
-newtype! {
-    /// Тег ФФД: 1075
-    ///
-    /// Телефоны оператора по приему платежей в формате +{Ц}.
-    ///
-    /// Параметр обязательный, если AgentSign передан в значениях paying_agent или paying_subagent.
-    struct TransferPhones(Vec<Phone>);
-}
+/// Тег ФФД: 1075
+///
+/// Телефоны оператора по приему платежей в формате +{Ц}.
+///
+/// Параметр обязательный, если AgentSign передан в значениях paying_agent или paying_subagent.
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(transparent)]
+struct TransferPhones(Vec<Phone>);
 
 newtype! {
     /// Requirements: <= 12 characters
@@ -740,12 +1092,12 @@ newtype! {
     struct Denominator(u32);
 }
 
-newtype! {
-    /// Отраслевой реквизит предмета расчета. Указывается только для товаров, которые подлежат
-    /// обязательной маркировке сканером. Включение этого реквизита предусмотрено НПА отраслевого
-    /// регулирования для соответствующей товарной группы.
-    struct SectoralItemProps(Vec<SectoralItemProp>);
-}
+/// Отраслевой реквизит предмета расчета. Указывается только для товаров, которые подлежат
+/// обязательной маркировке сканером. Включение этого реквизита предусмотрено НПА отраслевого
+/// регулирования для соответствующей товарной группы.
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(transparent)]
+struct SectoralItemProps(Vec<SectoralItemProp>);
 
 newtype! {
     /// Тег ФФД: 1262
@@ -949,19 +1301,20 @@ newtype! {
     pub struct Email(String);
 }
 
-newtype! {
-    /// Массив позиций чека с информацией о товарах. Количество товаров в чеке — не больше 100.
-    struct ReceiptItemsFFD105(Vec<ItemFFD105>);
-}
+/// Массив позиций чека с информацией о товарах. Количество товаров в чеке — не больше 100.
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(transparent)]
+struct ReceiptItemsFFD105(Vec<ItemFFD105>);
 
-newtype! {
-    /// Массив с информацией о товарах. Количество товаров в чеке — не больше 100.
-    ///
-    /// Параметры, которые предусмотрены в протоколе для отправки чеков по маркируемым товарам, не являются обязательными для товаров без маркировки.
-    ///
-    /// Если используется ФФД 1.2, но реализуемый товар не подлежит маркировке, поля можно не отправлять или отправить со значением null.
-    struct ReceiptItemsFFD12(Vec<ItemFFD12>);
-}
+/// Массив с информацией о товарах. Количество товаров в чеке — не больше 100.
+///
+/// Параметры, которые предусмотрены в протоколе для отправки чеков по маркируемым товарам, не являются обязательными для товаров без маркировки.
+///
+/// Если используется ФФД 1.2, но реализуемый товар не подлежит маркировке, поля можно не отправлять или отправить со значением null.
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(transparent)]
+struct ReceiptItemsFFD12(Vec<ItemFFD12>);
 
 newtype! {
     /// Requirements: <= 14 characters
@@ -1006,4 +1359,56 @@ newtype! {
     ///
     /// Вид оплаты «Иная форма оплаты».
     struct Provision(Amount);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn builds_ffd105_receipt_with_default_payments() {
+        let item = ReceiptItem105::new("Товар", 10_000, 2, Tax::Vat10).unwrap();
+
+        let receipt = Receipt::ffd105(vec![item], Taxation::Osn)
+            .unwrap()
+            .email("buyer@example.com")
+            .unwrap()
+            .build()
+            .unwrap();
+
+        match receipt {
+            Receipt::FFD105 { payments, .. } => {
+                assert_eq!(payments.total(), 20_000);
+            }
+            Receipt::FFD12 { .. } => panic!("expected FFD105 receipt"),
+        }
+    }
+
+    #[test]
+    fn rejects_receipt_without_contact() {
+        let item = ReceiptItem105::new("Товар", 10_000, 1, Tax::Vat10).unwrap();
+
+        let err = Receipt::ffd105(vec![item], Taxation::Osn)
+            .unwrap()
+            .build()
+            .unwrap_err();
+
+        assert!(matches!(err, ReceiptError::MissingContact));
+    }
+
+    #[test]
+    fn rejects_mismatched_payments_total() {
+        let item = ReceiptItem105::new("Товар", 10_000, 1, Tax::Vat10).unwrap();
+        let payments = Payments::new(5_000).unwrap();
+
+        let err = Receipt::ffd105(vec![item], Taxation::Osn)
+            .unwrap()
+            .email("buyer@example.com")
+            .unwrap()
+            .payments(payments)
+            .build()
+            .unwrap_err();
+
+        assert!(matches!(err, ReceiptError::PaymentsTotalMismatch));
+    }
 }

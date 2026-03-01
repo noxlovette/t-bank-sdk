@@ -364,6 +364,16 @@ newtype! {
     pub struct Amount(NonZeroU32);
 }
 
+impl Amount {
+    pub(crate) fn new(value: u32) -> Option<Self> {
+        NonZeroU32::new(value).map(Self)
+    }
+
+    pub(crate) fn get(&self) -> u32 {
+        self.0.get()
+    }
+}
+
 newtype! {
     /// Подпись запроса. [Как сформировать.](https://developer.tbank.ru/eacq/intro/developer/token)
     pub struct Token(String);

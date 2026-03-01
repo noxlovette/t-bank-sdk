@@ -1,5 +1,5 @@
 use crate::{Error, newtype};
-use std::time::Duration;
+use std::{any::type_name, time::Duration};
 use tracing::debug;
 
 pub const PRODUCTION_BASE: &str = "https://securepay.tinkoff/v2/Init";
@@ -14,7 +14,7 @@ pub enum Environment {
 
 impl From<&str> for Environment {
     fn from(s: &str) -> Self {
-        match s {
+        match s.to_uppercase().as_str() {
             "PRODUCTION" => Self::Production,
             "TEST" => Self::Test,
             _ => Self::Test,
@@ -57,10 +57,10 @@ impl TerminalKey {
 
     /// Gets and validates the terminal key from the environment
     fn from_env() -> Result<Self, Error> {
-        let tk = std::env::var("TERMINAL_KEY")
+        let tk = std::env::var("TERMINAL_ID")
             .ok()
             .filter(|t| t.len() <= 20)
-            .ok_or_else(|| Error::Config("TERMINAL_KEY variable is missing".to_string()))?;
+            .ok_or_else(|| Error::Config("TERMINAL_ID variable is missing".to_string()))?;
 
         Ok(Self(tk))
     }
@@ -74,7 +74,7 @@ impl Client {
 
         debug!("Initializing T-Bank SDK client v{version}");
 
-        let env: Environment = std::env::var("TOCHKA_ENV")
+        let env: Environment = std::env::var("TBANK_ENV")
             .unwrap_or(String::from("Test"))
             .into();
 
@@ -100,23 +100,14 @@ impl Client {
 }
 
 impl Client {
-    /// RU: Собрать полный URL для сервиса/версии/пути.  
-    /// EN: Build a fully-qualified URL for the given service, version and path.
-    pub fn url(&self, service: Service, version: ApiVersion, path: &str) -> String {
-        format!(
-            "{}{}/{}/{}",
-            self.env.base_url(),
-            service.path(),
-            version.as_str(),
-            path.trim_start_matches('/')
-        )
+    pub fn url(&self, path: &str) -> String {
+        format!("{}/{}", self.env.base_url(), path.trim_start_matches('/'))
     }
 }
 
 impl Client {
-    /// RU: Отправить запрос: добавить авторизацию, проверить HTTP-статусы и десериализовать тело.  
-    /// EN: Send a request with auth, map HTTP errors, and deserialize the body.
-    pub async fn send<T>(&self, req: reqwest::RequestBuilder) -> Result<T, Error>
+    /// Send a request with auth, map HTTP errors, and deserialize the body.
+    pub async fn send<T, R>(&self, req: reqwest::RequestBuilder) -> Result<T, Error>
     where
         T: serde::de::DeserializeOwned,
     {
@@ -130,7 +121,8 @@ impl Client {
         } else {
             debug!("Sending request (unable to snapshot builder)");
         }
-        let resp = req.bearer_auth(&self.token).send().await.map_err(|e| {
+
+        let resp = req.send().await.map_err(|e| {
             if e.is_timeout() {
                 debug!("Request timed out: {e}");
                 Error::Timeout
