@@ -14,9 +14,9 @@ sha2 = "0.10.9"
 url = { version = "2.5.8", features = ["serde"] }
 tracing = "0.1.44"
 thiserror = "2.0.18"
-serde_path_to_error = "0.1.20"
 strum = { version = "0.28.0", features = ["derive"] }
 
 [dev-dependencies]
+axum = {version = "0.8.8", features = ["macros"]}
 dotenvy = "0"
 tokio = { version = "1", features = ["full"] }

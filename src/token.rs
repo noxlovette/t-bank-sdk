@@ -7,11 +7,11 @@ use std::collections::BTreeMap;
 /// Creates a request token according to T-Bank's signing rules.
 pub trait CreateToken {
     /// Builds a SHA-256 token from root-level request fields and the provided password.
-    fn create_token(&self, password: &str) -> Token;
+    fn create_token(self, password: &str) -> Self;
 }
 
 impl CreateToken for InitPaymentReq {
-    fn create_token(&self, password: &str) -> Token {
+    fn create_token(mut self, password: &str) -> Self {
         let mut fields = BTreeMap::from([
             (String::from("Amount"), serialize_token_value(&self.amount)),
             (
@@ -62,7 +62,8 @@ impl CreateToken for InitPaymentReq {
         let joined_values = fields.into_values().collect::<String>();
         let hash = Sha256::digest(joined_values.as_bytes());
 
-        Token::new(format!("{hash:x}"))
+        self.token = Token::new(format!("{hash:x}"));
+        self
     }
 }
 
