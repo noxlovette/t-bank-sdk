@@ -18,3 +18,13 @@ pub use client::*;
 pub use error::*;
 pub use payment::*;
 pub use receipt::*;
+
+#[macro_export]
+macro_rules! serde_transparent {
+    ($(#[$meta:meta])* $vis:vis struct $name:ident ($ty:ty);) => {
+        $(#[$meta])*
+        #[derive(Serialize, Deserialize, Debug)]
+        #[serde(transparent)]
+        $vis struct $name($ty);
+    };
+}
