@@ -44,7 +44,7 @@ pub enum Receipt {
 /// Позиция чека с информацией о товарах.
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
-struct ItemFFD105 {
+pub struct ItemFFD105 {
     name: ItemName,
     price: ItemPrice,
     quantity: ItemQuantity,
@@ -60,7 +60,7 @@ struct ItemFFD105 {
 /// Позиция чека с информацией о товарах.
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
-struct ItemFFD12 {
+pub struct ItemFFD12 {
     name: ItemName,
     price: ItemPrice,
     quantity: ItemQuantity,
@@ -84,7 +84,7 @@ struct ItemFFD12 {
 /// Данные агента. Параметр обязательный, если используется агентская схема.
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
-struct AgentData {
+pub struct AgentData {
     agent_sign: AgentSign,
     operation_name: OperationName,
     phones: AgentPhones,
@@ -97,7 +97,7 @@ struct AgentData {
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
-struct SupplierInfo {
+pub struct SupplierInfo {
     phones: Vec<Phone>,
     name: SupplierName,
     inn: Inn,
@@ -112,7 +112,7 @@ struct SupplierInfo {
 /// С 01.09.2025 для чеков с маркированными товарами обязательно передается часовая зона места расчета (тег 1011). По умолчанию — Москва. Для изменения напишите на acq_help@tbank.ru.
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
-struct MarkCode {
+pub struct MarkCode {
     mark_code_type: MarkCodeType,
     value: Value,
 }
@@ -125,7 +125,7 @@ struct MarkCode {
 /// { "numenator": "1" "denominator" "2" }
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
-struct MarkQuantity {
+pub struct MarkQuantity {
     numerator: Numerator,
     denominator: Denominator,
 }
@@ -133,7 +133,7 @@ struct MarkQuantity {
 /// Отраслевой реквизит предмета расчета.
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
-struct SectoralItemProp {
+pub struct SectoralItemProp {
     federal_id: FederalId,
     date: SectoralDate,
     number: SectoralNumber,
@@ -933,13 +933,13 @@ newtype! {
     /// Тег ФФД: 1030
     ///
     /// Наименование товара.
-    struct ItemName(String);
+    pub struct ItemName(String);
 }
 
 newtype! {
     /// Тег ФФД: 1078
     /// Цена в копейках.
-    struct ItemPrice(Amount);
+    pub struct ItemPrice(Amount);
 }
 
 newtype! {
@@ -951,7 +951,7 @@ newtype! {
     ///
     /// целая часть — не больше 5 знаков;
     /// дробная — не больше 3 знаков для Атол и 2 знаков для CloudPayments.
-    struct ItemQuantity(Quantity);
+    pub struct ItemQuantity(Quantity);
 }
 
 newtype! {
@@ -960,11 +960,11 @@ newtype! {
     /// Тег ФФД: 1043
     ///
     /// Стоимость товара в копейках. Произведение Quantity и Price.
-    struct ItemAmount(Amount);
+    pub struct ItemAmount(Amount);
 }
 
 newtype! {
-    struct ItemTax(Tax);
+    pub struct ItemTax(Tax);
 }
 
 /// Тег ФФД: 1073
@@ -979,7 +979,7 @@ newtype! {
 /// - paying_subagent.
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(transparent)]
-struct AgentPhones(Vec<Phone>);
+pub struct AgentPhones(Vec<Phone>);
 
 /// Тег ФФД: 1074
 ///
@@ -988,7 +988,7 @@ struct AgentPhones(Vec<Phone>);
 /// Параметр обязательный, если AgentSign передан в значениях paying_agent или paying_subagent.
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(transparent)]
-struct ReceiverPhones(Vec<Phone>);
+pub struct ReceiverPhones(Vec<Phone>);
 
 /// Тег ФФД: 1075
 ///
@@ -997,7 +997,7 @@ struct ReceiverPhones(Vec<Phone>);
 /// Параметр обязательный, если AgentSign передан в значениях paying_agent или paying_subagent.
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(transparent)]
-struct TransferPhones(Vec<Phone>);
+pub struct TransferPhones(Vec<Phone>);
 
 newtype! {
     /// Requirements: <= 12 characters
@@ -1005,7 +1005,7 @@ newtype! {
     /// Тег ФФД: 1016
     ///
     /// ИНН оператора перевода. Параметр обязательный, если AgentSign передан в /// значениях bank_paying_agent или bank_paying_subagent.
-    struct OperatorInn(Inn);
+    pub struct OperatorInn(Inn);
 }
 
 newtype! {
@@ -1016,12 +1016,12 @@ newtype! {
     /// Наименование операции.
     ///
     /// Параметр обязательный, если AgentSign передан в значениях bank_paying_agent или bank_paying_subagent.
-    struct OperationName(String);
+    pub struct OperationName(String);
 }
 
 newtype! {
     /// Телефон в формате +{Ц}.
-    struct Phone(String);
+    pub struct Phone(String);
 }
 
 newtype! {
@@ -1032,7 +1032,7 @@ newtype! {
     /// Наименование оператора перевода.
     ///
     /// Параметр обязательный, если AgentSign передан в значениях bank_paying_agent или bank_paying_subagent.
-    struct OperatorName(String);
+    pub struct OperatorName(String);
 }
 
 newtype! {
@@ -1043,14 +1043,14 @@ newtype! {
     /// Адрес оператора перевода.
     ///
     /// Параметр обязательный, если AgentSign передан в значениях bank_paying_agent или bank_paying_subagent.
-    struct OperatorAddress(String);
+    pub struct OperatorAddress(String);
 }
 
 newtype! {
     /// Тег ФФД: 1191
     ///
     /// Дополнительный реквизит предмета расчета.
-    struct UserData(String);
+    pub struct UserData(String);
 }
 
 newtype! {
@@ -1059,7 +1059,7 @@ newtype! {
     /// Тег ФФД: 1230
     ///
     /// Цифровой код страны происхождения товара в соответствии с Общероссийским классификатором стран мира — 3 цифры.
-    struct CountryCode(String);
+    pub struct CountryCode(String);
 }
 
 newtype! {
@@ -1068,12 +1068,12 @@ newtype! {
     /// Режим обработки кода маркировки. Должен принимать значение, равное 0.
     ///
     /// Включается в чек, если предметом расчета является товар, который подлежит обязательной маркировке сканером — соответствующий код в поле paymentObject.
-    struct MarkProcessingMode(String);
+    pub struct MarkProcessingMode(String);
 }
 
 newtype! {
     /// Код маркировки
-    struct Value(String);
+    pub struct Value(String);
 }
 
 newtype! {
@@ -1081,7 +1081,7 @@ newtype! {
     /// Тег ФФД: 1293
     ///
     /// Числитель дробной части предмета расчета. Значение должно быть строго меньше значения реквизита «знаменатель».
-    struct Numerator(u32);
+    pub struct Numerator(u32);
 }
 
 newtype! {
@@ -1089,7 +1089,7 @@ newtype! {
     ///
     /// Знаменатель дробной части предмета расчета. Значение равно количеству товара в партии (упаковке),
     /// которая имет общий код маркировки товара.
-    struct Denominator(u32);
+    pub struct Denominator(u32);
 }
 
 /// Отраслевой реквизит предмета расчета. Указывается только для товаров, которые подлежат
@@ -1097,59 +1097,59 @@ newtype! {
 /// регулирования для соответствующей товарной группы.
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(transparent)]
-struct SectoralItemProps(Vec<SectoralItemProp>);
+pub struct SectoralItemProps(Vec<SectoralItemProp>);
 
 newtype! {
     /// Тег ФФД: 1262
     ///
     /// Идентификатор ФОИВ — федеральный орган исполнительной власти.
-    struct FederalId(String);
+    pub struct FederalId(String);
 }
 
 newtype! {
     /// Тег ФФД: 1263
     ///
     /// Дата нормативного акта ФОИВ.
-    struct SectoralDate(DateTime<Utc>);
+    pub struct SectoralDate(DateTime<Utc>);
 }
 
 newtype! {
     /// Тег ФФД: 1264
     ///
     /// Номер нормативного акта ФОИВ.
-    struct SectoralNumber(String);
+    pub struct SectoralNumber(String);
 }
 
 newtype! {
     /// Тег ФФД: 1265
     ///
     /// Состав значений, котрые определены нормативным актом ФОИВ.
-    struct SectoralValue(String);
+    pub struct SectoralValue(String);
 }
 
 /// Тег ФФД: 1270
 ///
 /// Операционный реквизит чека.
 #[derive(Serialize, Deserialize, Debug)]
-struct OperatingCheckProps;
+pub struct OperatingCheckProps;
 
 /// Тег ФФД: 1261
 ///
 /// Отраслевой реквизит чека.
 #[derive(Serialize, Deserialize, Debug)]
-struct SectoralCheckProps;
+pub struct SectoralCheckProps;
 
 /// Тег ФФД: 1084
 ///
 /// Дополнительный реквизит пользователя.
 #[derive(Serialize, Deserialize, Debug)]
-struct AddUserProp;
+pub struct AddUserProp;
 
 /// Тег ФФД: 1192
 ///
 /// Дополнительный реквизит чека (БСО).
 #[derive(Serialize, Deserialize, Debug)]
-struct AdditionalCheckProps;
+pub struct AdditionalCheckProps;
 
 newtype! {
     /// Requirements: <= 32 characters
@@ -1157,7 +1157,7 @@ newtype! {
     /// Тег ФФД: 1231
     ///
     /// Номер таможенной декларации.
-    struct DeclarationNumber(String);
+    pub struct DeclarationNumber(String);
 }
 
 newtype! {
@@ -1168,7 +1168,7 @@ newtype! {
     /// целая часть — не больше 8 знаков;
     /// дробная часть — не больше 2 знаков;
     /// значение не может быть отрицательным.
-    struct Excise(String);
+    pub struct Excise(String);
 }
 
 newtype! {
@@ -1184,7 +1184,7 @@ newtype! {
     /// Наименование поставщика. Параметр обязательный, если передается значение AgentSign в объекте AgentData. Состоит из 239 символов, в которые включаются телефоны поставщика — + 4 символа на каждый телефон.
     ///
     /// Например, если передано два телефона поставщика длиной 12 и 14 символов, максимальная длина наименования поставщика будет 239 – (12 + 4) – (14 + 4) = 205 символов.
-    struct SupplierName(String);
+    pub struct SupplierName(String);
 }
 
 newtype! {
@@ -1204,7 +1204,7 @@ newtype! {
     /// Пример: igQVAAADMTIzNDU2Nzg5MDEyMwAAAAAAAQ==
     ///
     /// Если в запросе передается параметр Ean13, который не прошел валидацию, то вернется неуспешный ответ с текстом ошибки в параметре message = Неверный параметр Ean13.
-    struct Ean13(String);
+    pub struct Ean13(String);
 }
 
 newtype! {
@@ -1214,19 +1214,19 @@ newtype! {
     ///
     /// целая часть — не больше 5 знаков;
     /// дробная — не больше 3 знаков для Атол и 2 знаков для CloudPayments.
-    struct Quantity(NonZeroU16);
+    pub struct Quantity(NonZeroU16);
 }
 
 newtype! {
     /// Код магазина. Для параметра ShopСode нужно использовать значение параметра Submerchant_ID, который возвращается в ответе при регистрации магазинов через XML. Если XML не используется, передавать поле не нужно.
-    struct ShopCode(String);
+    pub struct ShopCode(String);
 }
 
 newtype! {
     /// Тег ФФД: 1228
     ///
     /// ИНН клиента.
-    struct CustomerInn(Inn);
+    pub struct CustomerInn(Inn);
 }
 
 newtype! {
@@ -1235,12 +1235,12 @@ newtype! {
     /// Идентификатор/имя клиента.
     ///
     /// В параметре можно передавать только email или номер телефона.
-    struct Customer(String);
+    pub struct Customer(String);
 }
 
 /// Информация по клиенту.
 #[derive(Serialize, Deserialize, Debug)]
-struct ClientInfo {
+pub struct ClientInfo {
     birthdate: Birthdate,
     citizenship: Citizenship,
     document_code: DocumentCode,
@@ -1252,21 +1252,21 @@ newtype! {
     /// Тег ФФД: 1243
     ///
     /// Дата рождения клиента в формате ДД.ММ.ГГГГ.
-    struct Birthdate(String);
+    pub struct Birthdate(String);
 }
 
 newtype! {
     /// Тег ФФД: 1244
     ///
     /// Числовой код страны, гражданином которой является клиент. Код страны указывается в соответствии с Общероссийским классификатором стран мира [ОКСМ](https://classifikators.ru/oksm).
-    struct Citizenship(String);
+    pub struct Citizenship(String);
 }
 
 newtype! {
     /// Тег ФФД: 1246
     ///
     /// Реквизиты документа, удостоверяющего личность. Например, серия и номер паспорта.
-    struct DocumentData(String);
+    pub struct DocumentData(String);
 }
 
 newtype! {
@@ -1275,7 +1275,7 @@ newtype! {
     /// Тег ФФД: 1254
     ///
     /// Адрес клиента-грузополучателя.
-    struct Address(String);
+    pub struct Address(String);
 }
 
 newtype! {
@@ -1284,7 +1284,7 @@ newtype! {
     /// Тег ФФД: 1008.
     ///
     /// Электронная почта клиента. Параметр обязательный, если не передан Phone.
-    struct ReceiptEmail(Email);
+    pub struct ReceiptEmail(Email);
 }
 
 newtype! {
@@ -1293,7 +1293,7 @@ newtype! {
     /// Тег ФФД: 1008.
     ///
     /// Телефон клиента в формате +{Ц}. Параметр обязательный, если не передан Email.
-    struct ReceiptPhone(Phone);
+    pub struct ReceiptPhone(Phone);
 }
 
 newtype! {
@@ -1304,7 +1304,7 @@ newtype! {
 /// Массив позиций чека с информацией о товарах. Количество товаров в чеке — не больше 100.
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(transparent)]
-struct ReceiptItemsFFD105(Vec<ItemFFD105>);
+pub struct ReceiptItemsFFD105(Vec<ItemFFD105>);
 
 /// Массив с информацией о товарах. Количество товаров в чеке — не больше 100.
 ///
@@ -1314,7 +1314,7 @@ struct ReceiptItemsFFD105(Vec<ItemFFD105>);
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(transparent)]
-struct ReceiptItemsFFD12(Vec<ItemFFD12>);
+pub struct ReceiptItemsFFD12(Vec<ItemFFD12>);
 
 newtype! {
     /// Requirements: <= 14 characters
@@ -1322,7 +1322,7 @@ newtype! {
     /// Тег ФФД: 1031.
     ///
     /// Вид оплаты «Наличные». Сумма к оплате в копейках.
-    struct Cash(Amount);
+    pub struct Cash(Amount);
 }
 
 newtype! {
@@ -1331,7 +1331,7 @@ newtype! {
     /// Тег ФФД: 1081.
     ///
     /// Вид оплаты «Безналичный».
-    struct Electronic(Amount);
+    pub struct Electronic(Amount);
 }
 
 newtype! {
@@ -1340,7 +1340,7 @@ newtype! {
     /// Тег ФФД: 1215.
     ///
     /// Вид оплаты «Предварительная оплата (Аванс)».
-    struct AdvancePayment(Amount);
+    pub struct AdvancePayment(Amount);
 }
 
 newtype! {
@@ -1349,7 +1349,7 @@ newtype! {
     /// Тег ФФД: 1216.
     ///
     /// Вид оплаты «Постоплата (Кредит)».
-    struct Credit(Amount);
+    pub struct Credit(Amount);
 }
 
 newtype! {
@@ -1358,7 +1358,7 @@ newtype! {
     /// Тег ФФД: 1217.
     ///
     /// Вид оплаты «Иная форма оплаты».
-    struct Provision(Amount);
+    pub struct Provision(Amount);
 }
 
 #[cfg(test)]
