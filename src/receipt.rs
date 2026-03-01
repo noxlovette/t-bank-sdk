@@ -1,4 +1,4 @@
-use crate::{Amount, serde_transparent};
+use crate::{Amount, newtype};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::num::NonZeroU16;
@@ -575,7 +575,7 @@ enum FfdVersion {
     V105,
 }
 
-serde_transparent! {
+newtype! {
     /// Requirements: <= 128 characters
     ///
     /// Тег ФФД: 1030
@@ -584,13 +584,13 @@ serde_transparent! {
     struct ItemName(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Тег ФФД: 1078
     /// Цена в копейках.
     struct ItemPrice(Amount);
 }
 
-serde_transparent! {
+newtype! {
     /// Requirements: <= 8 characters
     ///
     /// Тег ФФД: 1023
@@ -602,7 +602,7 @@ serde_transparent! {
     struct ItemQuantity(Quantity);
 }
 
-serde_transparent! {
+newtype! {
     /// Requirements: <= 10 characters
     ///
     /// Тег ФФД: 1043
@@ -611,11 +611,11 @@ serde_transparent! {
     struct ItemAmount(Amount);
 }
 
-serde_transparent! {
+newtype! {
     struct ItemTax(Tax);
 }
 
-serde_transparent! {
+newtype! {
     /// Тег ФФД: 1073
     ///
     /// Телефоны платежного агента в формате +{Ц}.
@@ -629,7 +629,7 @@ serde_transparent! {
     struct AgentPhones(Vec<Phone>);
 }
 
-serde_transparent! {
+newtype! {
     /// Тег ФФД: 1074
     ///
     /// Телефоны оператора по приему платежей в формате +{Ц}.
@@ -638,7 +638,7 @@ serde_transparent! {
     struct ReceiverPhones(Vec<Phone>);
 }
 
-serde_transparent! {
+newtype! {
     /// Тег ФФД: 1075
     ///
     /// Телефоны оператора по приему платежей в формате +{Ц}.
@@ -647,7 +647,7 @@ serde_transparent! {
     struct TransferPhones(Vec<Phone>);
 }
 
-serde_transparent! {
+newtype! {
     /// Requirements: <= 12 characters
     ///
     /// Тег ФФД: 1016
@@ -656,7 +656,7 @@ serde_transparent! {
     struct OperatorInn(Inn);
 }
 
-serde_transparent! {
+newtype! {
     /// Requirements: <= 24 characters
     ///
     /// Тег ФФД: 1044
@@ -667,12 +667,12 @@ serde_transparent! {
     struct OperationName(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Телефон в формате +{Ц}.
     struct Phone(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Requirements: <= 64 characters
     ///
     /// Тег ФФД: 1026
@@ -683,7 +683,7 @@ serde_transparent! {
     struct OperatorName(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Requirements: <= 243 characters
     ///
     /// Тег ФФД: 1005
@@ -694,14 +694,14 @@ serde_transparent! {
     struct OperatorAddress(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Тег ФФД: 1191
     ///
     /// Дополнительный реквизит предмета расчета.
     struct UserData(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Requirements: <= 3 characters
     ///
     /// Тег ФФД: 1230
@@ -710,7 +710,7 @@ serde_transparent! {
     struct CountryCode(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Тег ФФД: 2102
     ///
     /// Режим обработки кода маркировки. Должен принимать значение, равное 0.
@@ -719,12 +719,12 @@ serde_transparent! {
     struct MarkProcessingMode(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Код маркировки
     struct Value(String);
 }
 
-serde_transparent! {
+newtype! {
     ///
     /// Тег ФФД: 1293
     ///
@@ -732,7 +732,7 @@ serde_transparent! {
     struct Numerator(u32);
 }
 
-serde_transparent! {
+newtype! {
     /// Тег ФФД: 1294
     ///
     /// Знаменатель дробной части предмета расчета. Значение равно количеству товара в партии (упаковке),
@@ -740,35 +740,35 @@ serde_transparent! {
     struct Denominator(u32);
 }
 
-serde_transparent! {
+newtype! {
     /// Отраслевой реквизит предмета расчета. Указывается только для товаров, которые подлежат
     /// обязательной маркировке сканером. Включение этого реквизита предусмотрено НПА отраслевого
     /// регулирования для соответствующей товарной группы.
     struct SectoralItemProps(Vec<SectoralItemProp>);
 }
 
-serde_transparent! {
+newtype! {
     /// Тег ФФД: 1262
     ///
     /// Идентификатор ФОИВ — федеральный орган исполнительной власти.
     struct FederalId(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Тег ФФД: 1263
     ///
     /// Дата нормативного акта ФОИВ.
     struct SectoralDate(DateTime<Utc>);
 }
 
-serde_transparent! {
+newtype! {
     /// Тег ФФД: 1264
     ///
     /// Номер нормативного акта ФОИВ.
     struct SectoralNumber(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Тег ФФД: 1265
     ///
     /// Состав значений, котрые определены нормативным актом ФОИВ.
@@ -799,7 +799,7 @@ struct AddUserProp;
 #[derive(Serialize, Deserialize, Debug)]
 struct AdditionalCheckProps;
 
-serde_transparent! {
+newtype! {
     /// Requirements: <= 32 characters
     ///
     /// Тег ФФД: 1231
@@ -808,7 +808,7 @@ serde_transparent! {
     struct DeclarationNumber(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Тег ФФД: 1229
     ///
     /// Сумма акциза в рублях с учетом копеек, которая включена в стоимость предмета расчета:
@@ -819,12 +819,12 @@ serde_transparent! {
     struct Excise(String);
 }
 
-serde_transparent! {
+newtype! {
     /// ИНН
     pub struct Inn(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Requirements: <= 239 characters
     ///
     /// Тег ФФД: 1225
@@ -835,7 +835,7 @@ serde_transparent! {
     struct SupplierName(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Requirements: <= 300 characters
     ///
     /// Тег ФФД: 1162
@@ -855,7 +855,7 @@ serde_transparent! {
     struct Ean13(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Requirements: <= 8 characters
     ///
     /// Количество или вес товара. Максимальное количество символов — 8, где:
@@ -865,19 +865,19 @@ serde_transparent! {
     struct Quantity(NonZeroU16);
 }
 
-serde_transparent! {
+newtype! {
     /// Код магазина. Для параметра ShopСode нужно использовать значение параметра Submerchant_ID, который возвращается в ответе при регистрации магазинов через XML. Если XML не используется, передавать поле не нужно.
     struct ShopCode(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Тег ФФД: 1228
     ///
     /// ИНН клиента.
     struct CustomerInn(Inn);
 }
 
-serde_transparent! {
+newtype! {
     /// Тег ФФД: 1227
     ///
     /// Идентификатор/имя клиента.
@@ -896,28 +896,28 @@ struct ClientInfo {
     address: Address,
 }
 
-serde_transparent! {
+newtype! {
     /// Тег ФФД: 1243
     ///
     /// Дата рождения клиента в формате ДД.ММ.ГГГГ.
     struct Birthdate(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Тег ФФД: 1244
     ///
     /// Числовой код страны, гражданином которой является клиент. Код страны указывается в соответствии с Общероссийским классификатором стран мира [ОКСМ](https://classifikators.ru/oksm).
     struct Citizenship(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Тег ФФД: 1246
     ///
     /// Реквизиты документа, удостоверяющего личность. Например, серия и номер паспорта.
     struct DocumentData(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Requirements: <= 256 characters
     ///
     /// Тег ФФД: 1254
@@ -926,7 +926,7 @@ serde_transparent! {
     struct Address(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Requirements: <= 64 characters
     ///
     /// Тег ФФД: 1008.
@@ -935,7 +935,7 @@ serde_transparent! {
     struct ReceiptEmail(Email);
 }
 
-serde_transparent! {
+newtype! {
     /// Requirements: <= 64 characters
     ///
     /// Тег ФФД: 1008.
@@ -944,17 +944,17 @@ serde_transparent! {
     struct ReceiptPhone(Phone);
 }
 
-serde_transparent! {
+newtype! {
     /// Инвариант электронной почты
     pub struct Email(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Массив позиций чека с информацией о товарах. Количество товаров в чеке — не больше 100.
     struct ReceiptItemsFFD105(Vec<ItemFFD105>);
 }
 
-serde_transparent! {
+newtype! {
     /// Массив с информацией о товарах. Количество товаров в чеке — не больше 100.
     ///
     /// Параметры, которые предусмотрены в протоколе для отправки чеков по маркируемым товарам, не являются обязательными для товаров без маркировки.
@@ -963,7 +963,7 @@ serde_transparent! {
     struct ReceiptItemsFFD12(Vec<ItemFFD12>);
 }
 
-serde_transparent! {
+newtype! {
     /// Requirements: <= 14 characters
     ///
     /// Тег ФФД: 1031.
@@ -972,7 +972,7 @@ serde_transparent! {
     struct Cash(Amount);
 }
 
-serde_transparent! {
+newtype! {
     /// Requirements: <= 14 characters
     ///
     /// Тег ФФД: 1081.
@@ -981,7 +981,7 @@ serde_transparent! {
     struct Electronic(Amount);
 }
 
-serde_transparent! {
+newtype! {
     /// Requirements: <= 14 characters
     ///
     /// Тег ФФД: 1215.
@@ -990,7 +990,7 @@ serde_transparent! {
     struct AdvancePayment(Amount);
 }
 
-serde_transparent! {
+newtype! {
     /// Requirements: <= 14 characters
     ///
     /// Тег ФФД: 1216.
@@ -999,7 +999,7 @@ serde_transparent! {
     struct Credit(Amount);
 }
 
-serde_transparent! {
+newtype! {
     /// Requirements: <= 14 characters
     ///
     /// Тег ФФД: 1217.

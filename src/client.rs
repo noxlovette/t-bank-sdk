@@ -1,5 +1,4 @@
-use crate::Error;
-use serde::{Deserialize, Serialize};
+use crate::{Error, newtype};
 use std::time::Duration;
 use tracing::debug;
 
@@ -44,11 +43,12 @@ pub struct Client {
     env: Environment,
 }
 
-/// Requirements: <= 20 characters
-///
-/// Идентификатор терминала. Выдается мерчанту в Т‑Бизнес при заведении терминала.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct TerminalKey(String);
+newtype! {
+    /// Requirements: <= 20 characters
+    ///
+    /// Идентификатор терминала. Выдается мерчанту в Т‑Бизнес при заведении терминала.
+    pub struct TerminalKey(String);
+}
 
 impl TerminalKey {
     /// Gets and validates the terminal key from the environment

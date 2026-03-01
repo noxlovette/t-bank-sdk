@@ -1,30 +1,34 @@
-use crate::{Receipt, TerminalKey, serde_transparent};
+use crate::{Receipt, TerminalKey, newtype};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::num::NonZeroU32;
+use std::{
+    fmt::{self, Display},
+    num::NonZeroU32,
+};
 use url::Url;
+use validator::Validate;
 
 /// Запрос для инициации платежа
-#[derive(Serialize)]
+#[derive(Serialize, Validate)]
 #[serde(rename_all = "PascalCase")]
 pub struct InitPaymentReq {
-    terminal_key: TerminalKey,
-    amount: Amount,
-    order_id: OrderId,
-    token: Token,
-    description: Option<Description>,
-    customer_key: Option<CustomerKey>,
-    recurrent: Option<Recurrent>,
-    pay_type: Option<PayType>,
-    language: Option<Language>,
-    notification_url: Option<NotificationUrl>,
-    success_url: Option<SuccessUrl>,
-    fail_url: Option<FailUrl>,
-    redirect_due_date: Option<DateTime<Utc>>,
+    pub terminal_key: TerminalKey,
+    pub amount: Amount,
+    pub order_id: OrderId,
+    pub token: Token,
+    pub description: Option<Description>,
+    pub customer_key: Option<CustomerKey>,
+    pub recurrent: Option<Recurrent>,
+    pub pay_type: Option<PayType>,
+    pub language: Option<Language>,
+    pub notification_url: Option<NotificationUrl>,
+    pub success_url: Option<SuccessUrl>,
+    pub fail_url: Option<FailUrl>,
+    pub redirect_due_date: Option<DateTime<Utc>>,
     #[serde(rename = "DATA")]
-    data: Option<Data>,
-    receipt: Option<Receipt>,
-    shops: Vec<Shop>,
+    pub data: Option<Data>,
+    pub receipt: Option<Receipt>,
+    pub shops: Vec<Shop>,
 }
 
 /// Ответ инициатора платежа
@@ -39,8 +43,8 @@ pub struct InitPaymentRes {
     payment_id: PaymentId,
     error_code: String,
     payment_url: Option<Url>,
-    message: String,
-    details: String,
+    message: Option<String>,
+    details: Option<String>,
 }
 
 /// JSON-объект с дополнительными параметрами по операции и настройками в формате ключ:значение.
@@ -76,6 +80,19 @@ pub enum PayType {
     T,
 }
 
+impl Display for PayType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::O => {
+                write!(f, "o")
+            }
+            Self::T => {
+                write!(f, "t")
+            }
+        }
+    }
+}
+
 /// Requirements: <= 2 characters
 ///
 /// Default: ru
@@ -93,6 +110,19 @@ pub enum Language {
     En,
 }
 
+impl Display for Language {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::Ru => {
+                write!(f, "ru")
+            }
+            Self::En => {
+                write!(f, "en")
+            }
+        }
+    }
+}
+
 /// JSON-объект с данными маркетплейса. Параметр обязательный для маркетплейсов.
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
@@ -102,7 +132,8 @@ pub struct Shop {
     name: Option<ShopName>,
     fee: Option<Fee>,
 }
-serde_transparent! {
+
+newtype! {
     /// Requirements: <= 10 chars
     ///
     /// Сумма в копейках.
@@ -117,19 +148,19 @@ serde_transparent! {
     pub struct Amount(NonZeroU32);
 }
 
-serde_transparent! {
+newtype! {
+    /// Подпись запроса. [Как сформировать.](https://developer.tbank.ru/eacq/intro/developer/token)
+    pub struct Token(String);
+}
+
+newtype! {
     /// Requirements: <= 36 characters
     ///
     /// Идентификатор заказа в системе мерчанта. Должен быть уникальным для каждой операции.
     pub struct OrderId(String);
 }
 
-serde_transparent! {
-    /// Подпись запроса
-    pub struct Token(String);
-}
-
-serde_transparent! {
+newtype! {
     /// Requirements: <= 140 characters
     ///
     /// Описание заказа. Значение параметра будет отображено на платежной форме.
@@ -138,7 +169,7 @@ serde_transparent! {
     pub struct Description(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Requirements: <= 36 characters
     ///
     /// Идентификатор покупателя в системе мерчанта. Нужен для сохранения карт на платежной форме — платежи в один клик.
@@ -149,11 +180,11 @@ serde_transparent! {
     pub struct CustomerKey(String);
 }
 
-serde_transparent! {
+newtype! {
     pub struct CardId(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Requirements: <= 1 characters, [Y]
     ///
     /// Признак родительского CC-платежа. Обязателен для проведения операции с сохранением реквизитов карты покупателя.
@@ -162,7 +193,7 @@ serde_transparent! {
     pub struct Recurrent(String);
 }
 
-serde_transparent! {
+newtype! {
     /// URL на веб-сайте мерчанта, куда будет отправлен POST-запрос о статусе выполнения вызываемых методов — настраивается в личном кабинете.
     ///
     /// Если параметр передан, используется его значение, если нет — значение из настроек терминала.
@@ -171,21 +202,21 @@ serde_transparent! {
     pub struct NotificationUrl(Url);
 }
 
-serde_transparent! {
+newtype! {
     /// URL на веб-сайте мерчанта, куда будет переведен клиент в случае успешной оплаты — настраивается в личном кабинете.
     ///
     /// Если параметр передан, используется его значение, если нет — значение из настроек терминала.
     pub struct SuccessUrl(Url);
 }
 
-serde_transparent! {
+newtype! {
     /// URL на веб-сайте мерчанта, куда будет переведен клиент в случае неуспешной оплаты — настраивается в личном кабинете.
     ///
     /// Если параметр передан, используется его значение, если нет — значение из настроек терминала.
     pub struct FailUrl(Url);
 }
 
-serde_transparent! {
+newtype! {
     /// Cрок жизни ссылки или динамического QR-кода СБП, если выбран этот способ оплаты.
     ///
     /// Если дата в параметре меньше текущей, оплата по ссылке и QR будет  недоступна.
@@ -202,7 +233,7 @@ serde_transparent! {
     pub struct RedirectDueDate(DateTime<Utc>);
 }
 
-serde_transparent! {
+newtype! {
     /// Requirements: [SDK, Desktop, Mobile]
     ///
     /// Тип устройства:
@@ -213,39 +244,39 @@ serde_transparent! {
     pub struct Device(String);
 }
 
-serde_transparent! {
+newtype! {
     /// ОС устройства.
     pub struct DeviceOs(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Признак открытия в WebView.
     pub struct DeviceWebView(bool);
 }
 
-serde_transparent! {
+newtype! {
     /// Браузер.
     pub struct DeviceBrowser(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Признак проведения операции через T‑Pay по API.
     pub struct TinkoffPayWeb(bool);
 }
 
-serde_transparent! {
+newtype! {
     struct ShopCode(String);
 }
 
-serde_transparent! {
+newtype! {
     struct ShopAmount(Amount);
 }
 
-serde_transparent! {
+newtype! {
     struct ShopName(String);
 }
 
-serde_transparent! {
+newtype! {
     struct Fee(String);
 }
 
@@ -266,14 +297,14 @@ serde_transparent! {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OperationInitiatorType;
 
-serde_transparent! {
+newtype! {
     /// Requirements: <= 20 characters
     ///
     /// Статус транзакции.
     struct Status(String);
 }
 
-serde_transparent! {
+newtype! {
     /// Requirements: <= 20 characters
     ///
     /// Идентификатор платежа в системе Т‑Бизнес.
