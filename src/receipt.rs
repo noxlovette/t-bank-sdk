@@ -1,38 +1,62 @@
-use crate::{Amount, newtype};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::num::NonZeroU16;
 use strum::Display;
-
-const MAX_RECEIPT_ITEMS: usize = 100;
-const ITEM_NAME_MAX_LEN: usize = 128;
-const ITEM_QUANTITY_MAX_LEN: usize = 8;
-const ITEM_AMOUNT_MAX_LEN: usize = 10;
-const RECEIPT_CONTACT_MAX_LEN: usize = 64;
-const EAN13_MAX_LEN: usize = 300;
-const PAYMENT_MAX_LEN: usize = 14;
 
 /// JSON-объект с данными чека. Параметр обязательный, если подключена онлайн-касса.
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub enum Receipt {
     FFD105 {
-        items: ReceiptItemsFFD105,
+        /// Массив позиций чека с информацией о товарах. Количество товаров в чеке — не больше 100.
+        items: Vec<ItemFFD105>,
         ffd_version: Option<FfdVersion>,
-        email: Option<ReceiptEmail>,
-        phone: Option<ReceiptPhone>,
+        /// Requirements: <= 64 characters
+        ///
+        /// Тег ФФД: 1008.
+        ///
+        /// Электронная почта клиента. Параметр обязательный, если не передан Phone.
+        email: Option<String>,
+        /// Requirements: <= 64 characters
+        ///
+        /// Тег ФФД: 1008.
+        ///
+        /// Телефон клиента в формате +{Ц}. Параметр обязательный, если не передан Email.
+        phone: Option<String>,
         taxation: Taxation,
         payments: Payments,
     },
     FFD12 {
-        items: ReceiptItemsFFD12,
+        /// Массив с информацией о товарах. Количество товаров в чеке — не больше 100.
+        ///
+        /// Параметры, которые предусмотрены в протоколе для отправки чеков по  маркируемым товарам, не являются обязательными для товаров без маркировки.
+        ///
+        /// Если используется ФФД 1.2, но реализуемый товар не подлежит маркировке, поля можно не отправлять или отправить со значением null.
+        items: Vec<ItemFFD12>,
         ffd_vesrion: Option<FfdVersion>,
         client_info: Option<ClientInfo>,
         taxation: Taxation,
-        email: Option<ReceiptEmail>,
-        phone: Option<ReceiptPhone>,
-        customer: Option<Customer>,
-        customer_inn: Option<CustomerInn>,
+        /// Requirements: <= 64 characters
+        ///
+        /// Тег ФФД: 1008.
+        ///
+        /// Электронная почта клиента. Параметр обязательный, если не передан Phone.
+        email: Option<String>,
+        /// Requirements: <= 64 characters
+        ///
+        /// Тег ФФД: 1008.
+        ///
+        /// Телефон клиента в формате +{Ц}. Параметр обязательный, если не передан Email.
+        phone: Option<String>,
+        /// Тег ФФД: 1227
+        ///
+        /// Идентификатор/имя клиента.
+        ///
+        /// В параметре можно передавать только email или номер телефона.
+        customer: Option<String>,
+        /// Тег ФФД: 1228
+        ///
+        /// ИНН клиента.
+        customer_inn: Option<String>,
         payments: Option<Payments>,
         operating_check_props: Option<OperatingCheckProps>,
         sectoral_check_props: Option<SectoralCheckProps>,
@@ -45,14 +69,26 @@ pub enum Receipt {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub struct ItemFFD105 {
-    name: ItemName,
-    price: ItemPrice,
-    quantity: ItemQuantity,
-    amount: ItemAmount,
+    /// Тег ФФД: 1030
+    ///
+    /// Наименование товара.
+    name: String,
+    /// Тег ФФД: 1078
+    ///
+    /// Цена в копейках.
+    price: u32,
+    /// Тег ФФД: 1023
+    ///
+    /// Количество или вес товара.
+    quantity: u16,
+    /// Тег ФФД: 1043
+    ///
+    /// Стоимость товара в копейках. Произведение Quantity и Price.
+    amount: u32,
     payment_method: PaymentMethod,
     payment_object: PaymentObjectFF105,
     tax: Tax,
-    ean_13: Option<Ean13>,
+    ean_13: Option<String>,
     agent_data: Option<AgentData>,
     supplier_info: Option<SupplierInfo>,
 }
@@ -61,24 +97,69 @@ pub struct ItemFFD105 {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub struct ItemFFD12 {
-    name: ItemName,
-    price: ItemPrice,
-    quantity: ItemQuantity,
-    amount: ItemAmount,
+    agent_data: AgentData,
+    supplier_info: SupplierInfo,
+    /// Requirements: <= 128 characters
+    ///
+    /// Тег ФФД: 1030
+    ///
+    /// Наименование товара.
+    name: String,
+    /// Тег ФФД: 1079
+    ///
+    /// Цена в копейках.
+    price: u32,
+    /// Requirements: <= 8 characters
+    /// Тег ФФД: 1023
+    ///
+    /// Количество или вес товара. Максимальное количество символов — 8, где:
+    ///
+    /// целая часть — не больше 5 знаков,
+    /// дробная — не больше 3 знаков для Атол и 2 знаков для CloudPayments.
+    quantity: u16,
+    /// Requirements: <= 10 characters
+    ///
+    /// Тег ФФД: 1043
+    ///
+    /// Стоимость товара в копейках. Произведение Quantity и Price.
+    amount: u32,
     payment_method: PaymentMethod,
     payment_object: PaymentObjectFF12,
     tax: Tax,
-    agent_data: AgentData,
-    supplier_info: SupplierInfo,
-    user_data: UserData,
-    excise: Excise,
-    country_code: CountryCode,
-    declaration_number: DeclarationNumber,
+    /// Тег ФФД: 1191
+    ///
+    /// Дополнительный реквизит предмета расчета.
+    user_data: String,
+    /// Тег ФФД: 1229
+    ///
+    /// Сумма акциза в рублях с учетом копеек, которая включена в стоимость предмета расчета:
+    ///
+    /// целая часть — не больше 8 знаков;
+    /// дробная часть — не больше 2 знаков;
+    /// значение не может быть отрицательным.
+    excise: String,
+    /// Requirements: <= 3 characters
+    ///
+    /// Тег ФФД: 1230
+    ///
+    /// Цифровой код страны происхождения товара в соответствии с Общероссийским  классификатором стран мира — 3 цифры.
+    country_code: String,
+    /// Requirements: <= 32 characters
+    ///
+    /// Тег ФФД: 1231
+    ///
+    /// Номер таможенной декларации.
+    declaration_number: String,
     measurement_unit: MeasurementUnit,
-    mark_processing_mode: MarkProcessingMode,
+    /// Тег ФФД: 2102
+    ///
+    /// Режим обработки кода маркировки. Должен принимать значение, равное 0.
+    ///
+    /// обязательной маркировке сканером — соответствующий код в поле paymentObject.
+    mark_processing_mode: String,
     mark_code: Vec<MarkCode>,
     mark_quantity: MarkQuantity,
-    sectoral_item_props: SectoralCheckProps,
+    sectoral_item_props: SectoralItemProps,
 }
 
 /// Данные агента. Параметр обязательный, если используется агентская схема.
@@ -86,21 +167,21 @@ pub struct ItemFFD12 {
 #[serde(rename_all = "PascalCase")]
 pub struct AgentData {
     agent_sign: AgentSign,
-    operation_name: OperationName,
-    phones: AgentPhones,
-    receiver_phones: ReceiverPhones,
-    transfer_phones: TransferPhones,
-    operator_name: OperatorName,
-    operator_address: OperatorAddress,
-    perator_inn: OperatorInn,
+    operation_name: String,
+    phones: Vec<String>,
+    receiver_phones: Vec<String>,
+    transfer_phones: Vec<String>,
+    operator_name: String,
+    operator_address: String,
+    perator_inn: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub struct SupplierInfo {
-    phones: Vec<Phone>,
-    name: SupplierName,
-    inn: Inn,
+    phones: Vec<String>,
+    name: String,
+    inn: String,
 }
 
 /// Тег ФФД: 1163
@@ -114,7 +195,7 @@ pub struct SupplierInfo {
 #[serde(rename_all = "PascalCase")]
 pub struct MarkCode {
     mark_code_type: MarkCodeType,
-    value: Value,
+    value: String,
 }
 
 /// Реквизит «Дробное количество маркированного товара». Передается, только если расчет осуществляется
@@ -126,18 +207,30 @@ pub struct MarkCode {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub struct MarkQuantity {
-    numerator: Numerator,
-    denominator: Denominator,
+    numerator: u32,
+    denominator: u32,
 }
 
 /// Отраслевой реквизит предмета расчета.
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
-pub struct SectoralItemProp {
-    federal_id: FederalId,
-    date: SectoralDate,
-    number: SectoralNumber,
-    value: SectoralValue,
+pub struct SectoralItemProps {
+    /// Тег ФФД: 1262
+    ///
+    /// Идентификатор ФОИВ — федеральный орган исполнительной власти.
+    federal_id: String,
+    /// Тег ФФД: 1263
+    ///
+    /// Дата нормативного акта ФОИВ.
+    date: DateTime<Utc>,
+    /// Тег ФФД: 1264
+    ///
+    /// Номер нормативного акта ФОИВ.
+    number: String,
+    /// Тег ФФД: 1265
+    ///
+    /// Состав значений, котрые определены нормативным актом ФОИВ.
+    value: String,
 }
 
 /// Детали платежа.
@@ -148,264 +241,11 @@ pub struct SectoralItemProp {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
 pub struct Payments {
-    electronic: Electronic,
-    cash: Option<Cash>,
-    advance_payment: Option<AdvancePayment>,
-    credit: Option<Credit>,
-    provision: Option<Provision>,
-}
-
-/// Error while building receipt payloads.
-#[derive(Debug, thiserror::Error)]
-pub enum ReceiptError {
-    /// A string field was empty.
-    #[error("{field} must not be empty")]
-    Empty { field: &'static str },
-
-    /// A string or numeric field exceeded its documented maximum length.
-    #[error("{field} must be at most {max} characters, got {actual}")]
-    TooLong {
-        field: &'static str,
-        max: usize,
-        actual: usize,
-    },
-
-    /// A numeric field must be greater than zero.
-    #[error("{field} must be greater than 0")]
-    MustBePositive { field: &'static str },
-
-    /// Receipts require at least one item.
-    #[error("receipt must contain at least one item")]
-    EmptyItems,
-
-    /// Receipts may contain at most 100 items.
-    #[error("receipt must contain at most {max} items, got {actual}")]
-    TooManyItems { max: usize, actual: usize },
-
-    /// Either email or phone must be provided.
-    #[error("either Email or Phone must be provided")]
-    MissingContact,
-
-    /// Multiplying price by quantity overflowed `u32`.
-    #[error("receipt item amount overflowed u32")]
-    AmountOverflow,
-
-    /// Explicit payments did not match the sum of receipt items.
-    #[error("payments total must equal the sum of receipt item amounts")]
-    PaymentsTotalMismatch,
-}
-
-/// Builder-friendly receipt item for FFD 1.05.
-#[derive(Debug)]
-pub struct ReceiptItem105 {
-    inner: ItemFFD105,
-}
-
-/// Builder for `Receipt::FFD105`.
-#[derive(Debug)]
-pub struct ReceiptBuilder105 {
-    items: Vec<ReceiptItem105>,
-    ffd_version: Option<FfdVersion>,
-    email: Option<ReceiptEmail>,
-    phone: Option<ReceiptPhone>,
-    taxation: Taxation,
-    payments: Option<Payments>,
-}
-
-impl Payments {
-    /// Creates a payments object with the required `Electronic` amount.
-    pub fn new(electronic: u32) -> Result<Self, ReceiptError> {
-        Ok(Self {
-            electronic: Electronic(validate_payment_amount("Electronic", electronic)?),
-            cash: None,
-            advance_payment: None,
-            credit: None,
-            provision: None,
-        })
-    }
-
-    /// Sets the `Cash` payment amount.
-    pub fn cash(mut self, cash: u32) -> Result<Self, ReceiptError> {
-        self.cash = Some(Cash(validate_payment_amount("Cash", cash)?));
-        Ok(self)
-    }
-
-    /// Sets the `AdvancePayment` amount.
-    pub fn advance_payment(mut self, advance_payment: u32) -> Result<Self, ReceiptError> {
-        self.advance_payment = Some(AdvancePayment(validate_payment_amount(
-            "AdvancePayment",
-            advance_payment,
-        )?));
-        Ok(self)
-    }
-
-    /// Sets the `Credit` amount.
-    pub fn credit(mut self, credit: u32) -> Result<Self, ReceiptError> {
-        self.credit = Some(Credit(validate_payment_amount("Credit", credit)?));
-        Ok(self)
-    }
-
-    /// Sets the `Provision` amount.
-    pub fn provision(mut self, provision: u32) -> Result<Self, ReceiptError> {
-        self.provision = Some(Provision(validate_payment_amount("Provision", provision)?));
-        Ok(self)
-    }
-
-    fn total(&self) -> u32 {
-        let mut total = self.electronic.0.get();
-        if let Some(value) = &self.cash {
-            total += value.0.get();
-        }
-        if let Some(value) = &self.advance_payment {
-            total += value.0.get();
-        }
-        if let Some(value) = &self.credit {
-            total += value.0.get();
-        }
-        if let Some(value) = &self.provision {
-            total += value.0.get();
-        }
-        total
-    }
-}
-
-impl ReceiptItem105 {
-    /// Creates an FFD 1.05 receipt item with required fields.
-    pub fn new(
-        name: impl Into<String>,
-        price: u32,
-        quantity: u16,
-        tax: Tax,
-    ) -> Result<Self, ReceiptError> {
-        let name = validate_string("Name", name.into(), ITEM_NAME_MAX_LEN, ItemName)?;
-        let price_amount = validate_amount_with_len("Price", price, ITEM_AMOUNT_MAX_LEN)?;
-        let quantity = validate_quantity(quantity)?;
-        let amount = compute_item_amount(&price_amount, &quantity)?;
-
-        Ok(Self {
-            inner: ItemFFD105 {
-                name,
-                price: ItemPrice(price_amount),
-                quantity: ItemQuantity(quantity),
-                amount: ItemAmount(amount),
-                payment_method: PaymentMethod::default(),
-                payment_object: PaymentObjectFF105::default(),
-                tax,
-                ean_13: None,
-                agent_data: None,
-                supplier_info: None,
-            },
-        })
-    }
-
-    /// Overrides the default payment method.
-    pub fn payment_method(mut self, payment_method: PaymentMethod) -> Self {
-        self.inner.payment_method = payment_method;
-        self
-    }
-
-    /// Overrides the default payment object.
-    pub fn payment_object(mut self, payment_object: PaymentObjectFF105) -> Self {
-        self.inner.payment_object = payment_object;
-        self
-    }
-
-    /// Sets the optional `Ean13` field.
-    pub fn ean_13(mut self, ean_13: impl Into<String>) -> Result<Self, ReceiptError> {
-        self.inner.ean_13 = Some(validate_string(
-            "Ean13",
-            ean_13.into(),
-            EAN13_MAX_LEN,
-            Ean13,
-        )?);
-        Ok(self)
-    }
-
-    fn amount(&self) -> u32 {
-        self.inner.amount.0.get()
-    }
-}
-
-impl Receipt {
-    /// Starts building an FFD 1.05 receipt.
-    pub fn ffd105(
-        items: Vec<ReceiptItem105>,
-        taxation: Taxation,
-    ) -> Result<ReceiptBuilder105, ReceiptError> {
-        validate_items_len(items.len())?;
-
-        Ok(ReceiptBuilder105 {
-            items,
-            ffd_version: None,
-            email: None,
-            phone: None,
-            taxation,
-            payments: None,
-        })
-    }
-}
-
-impl ReceiptBuilder105 {
-    /// Sets the optional FFD version.
-    pub fn ffd_version(mut self, ffd_version: FfdVersion) -> Self {
-        self.ffd_version = Some(ffd_version);
-        self
-    }
-
-    /// Sets the customer email.
-    pub fn email(mut self, email: impl Into<String>) -> Result<Self, ReceiptError> {
-        self.email = Some(ReceiptEmail(validate_string(
-            "Email",
-            email.into(),
-            RECEIPT_CONTACT_MAX_LEN,
-            Email,
-        )?));
-        Ok(self)
-    }
-
-    /// Sets the customer phone.
-    pub fn phone(mut self, phone: impl Into<String>) -> Result<Self, ReceiptError> {
-        self.phone = Some(ReceiptPhone(validate_string(
-            "Phone",
-            phone.into(),
-            RECEIPT_CONTACT_MAX_LEN,
-            Phone,
-        )?));
-        Ok(self)
-    }
-
-    /// Overrides the default payments object.
-    pub fn payments(mut self, payments: Payments) -> Self {
-        self.payments = Some(payments);
-        self
-    }
-
-    /// Builds the final receipt.
-    pub fn build(self) -> Result<Receipt, ReceiptError> {
-        if self.email.is_none() && self.phone.is_none() {
-            return Err(ReceiptError::MissingContact);
-        }
-
-        let items_total: u32 = self.items.iter().map(ReceiptItem105::amount).sum();
-        let payments = match self.payments {
-            Some(payments) => {
-                if payments.total() != items_total {
-                    return Err(ReceiptError::PaymentsTotalMismatch);
-                }
-                payments
-            }
-            None => Payments::new(items_total)?,
-        };
-
-        Ok(Receipt::FFD105 {
-            items: ReceiptItemsFFD105(self.items.into_iter().map(|item| item.inner).collect()),
-            ffd_version: self.ffd_version,
-            email: self.email,
-            phone: self.phone,
-            taxation: self.taxation,
-            payments,
-        })
-    }
+    electronic: u32,
+    cash: Option<u32>,
+    advance_payment: Option<u32>,
+    credit: Option<u32>,
+    provision: Option<u32>,
 }
 
 /// Requirements: [bank_paying_agent, bank_paying_subagent, paying_agent, paying_subagent, attorney, commission_agent, another]
@@ -461,111 +301,56 @@ enum MarkCodeType {
     Rawcode,
 }
 
-/// Тег ФФД: 2108
-///
-/// Единицы измерения:
-///
-/// шт — применяется для предметов расчета, которые могут быть реализованы поштучно или единицами;
-/// г — грамм;
-/// кг — килограмм;
-/// т — тонна;
-/// см — сантиметр;
-/// дм — дециметр;
-/// м — метр;
-/// см2 — квадратный сантиметр;
-/// дм2 — квадратный дециметр;
-/// м2 — квадратный метр;
-/// мл — миллиметр;
-/// л — китр;
-/// м3 — кубический метр;
-/// кВт*ч — киловатт/час;
-/// Гкал — гигакалория;
-/// сут или дн — сутки или день;
-/// ч — час;
-/// мин — минута;
-/// с — секунда;
-/// Кбайт — килобайт;
-/// Мбайт — мегабайт;
-/// Гбайт — гигабайт;
-/// Тбайт — терабайт;
-/// — — применяется при использовании иных едениц измерения
-/// Также возможна передача произвольных значений.
-///
-/// Параметр обязательный, если версия ФФД онлайн-кассы — 1.2.
 #[derive(Debug, Serialize, Deserialize)]
 pub enum MeasurementUnit {
     #[serde(rename = "шт")]
     Piece,
-
     #[serde(rename = "г")]
     Gram,
-
     #[serde(rename = "кг")]
     Kilogram,
-
     #[serde(rename = "т")]
     Ton,
-
     #[serde(rename = "см")]
     Centimeter,
-
     #[serde(rename = "дм")]
     Decimeter,
-
     #[serde(rename = "м")]
     Meter,
-
     #[serde(rename = "см2")]
     SquareCentimeter,
-
     #[serde(rename = "дм2")]
     SquareDecimeter,
-
     #[serde(rename = "м2")]
     SquareMeter,
-
     #[serde(rename = "мл")]
     Milliliter,
-
     #[serde(rename = "л")]
     Liter,
-
     #[serde(rename = "м3")]
     CubicMeter,
-
     #[serde(rename = "кВт*ч")]
     KilowattHour,
-
     #[serde(rename = "Гкал")]
     Gigacalorie,
-
     #[serde(rename = "сут")]
     Day,
-
     #[serde(rename = "дн")]
     DayAlt,
-
     #[serde(rename = "ч")]
     Hour,
-
     #[serde(rename = "мин")]
     Minute,
-
     #[serde(rename = "с")]
     Second,
-
     #[serde(rename = "Кбайт")]
     Kilobyte,
-
     #[serde(rename = "Мбайт")]
     Megabyte,
-
     #[serde(rename = "Гбайт")]
     Gigabyte,
-
     #[serde(rename = "Тбайт")]
     Terabyte,
-
     #[serde(rename = "-")]
     Other,
 }
@@ -837,578 +622,24 @@ pub enum FfdVersion {
     V105,
 }
 
-fn validate_string<T>(
-    field: &'static str,
-    value: String,
-    max_len: usize,
-    make: impl FnOnce(String) -> T,
-) -> Result<T, ReceiptError> {
-    if value.is_empty() {
-        return Err(ReceiptError::Empty { field });
-    }
-
-    let actual = value.chars().count();
-    if actual > max_len {
-        return Err(ReceiptError::TooLong {
-            field,
-            max: max_len,
-            actual,
-        });
-    }
-
-    Ok(make(value))
-}
-
-fn validate_amount_with_len(
-    field: &'static str,
-    value: u32,
-    max_len: usize,
-) -> Result<Amount, ReceiptError> {
-    if value == 0 {
-        return Err(ReceiptError::MustBePositive { field });
-    }
-
-    let actual = value.to_string().len();
-    if actual > max_len {
-        return Err(ReceiptError::TooLong {
-            field,
-            max: max_len,
-            actual,
-        });
-    }
-
-    Amount::new(value).ok_or(ReceiptError::MustBePositive { field })
-}
-
-fn validate_payment_amount(field: &'static str, value: u32) -> Result<Amount, ReceiptError> {
-    validate_amount_with_len(field, value, PAYMENT_MAX_LEN)
-}
-
-fn validate_quantity(value: u16) -> Result<Quantity, ReceiptError> {
-    if value == 0 {
-        return Err(ReceiptError::MustBePositive { field: "Quantity" });
-    }
-
-    let actual = value.to_string().len();
-    if actual > ITEM_QUANTITY_MAX_LEN {
-        return Err(ReceiptError::TooLong {
-            field: "Quantity",
-            max: ITEM_QUANTITY_MAX_LEN,
-            actual,
-        });
-    }
-
-    NonZeroU16::new(value)
-        .map(Quantity)
-        .ok_or(ReceiptError::MustBePositive { field: "Quantity" })
-}
-
-fn compute_item_amount(price: &Amount, quantity: &Quantity) -> Result<Amount, ReceiptError> {
-    let total = price
-        .get()
-        .checked_mul(u32::from(quantity.0.get()))
-        .ok_or(ReceiptError::AmountOverflow)?;
-
-    validate_amount_with_len("Amount", total, ITEM_AMOUNT_MAX_LEN)
-}
-
-fn validate_items_len(actual: usize) -> Result<(), ReceiptError> {
-    if actual == 0 {
-        return Err(ReceiptError::EmptyItems);
-    }
-
-    if actual > MAX_RECEIPT_ITEMS {
-        return Err(ReceiptError::TooManyItems {
-            max: MAX_RECEIPT_ITEMS,
-            actual,
-        });
-    }
-
-    Ok(())
-}
-
-newtype! {
-    /// Requirements: <= 128 characters
-    ///
-    /// Тег ФФД: 1030
-    ///
-    /// Наименование товара.
-    pub struct ItemName(String);
-}
-
-newtype! {
-    /// Тег ФФД: 1078
-    /// Цена в копейках.
-    pub struct ItemPrice(Amount);
-}
-
-newtype! {
-    /// Requirements: <= 8 characters
-    ///
-    /// Тег ФФД: 1023
-    ///
-    /// Количество или вес товара. Максимальное количество символов — 8, где:
-    ///
-    /// целая часть — не больше 5 знаков;
-    /// дробная — не больше 3 знаков для Атол и 2 знаков для CloudPayments.
-    pub struct ItemQuantity(Quantity);
-}
-
-newtype! {
-    /// Requirements: <= 10 characters
-    ///
-    /// Тег ФФД: 1043
-    ///
-    /// Стоимость товара в копейках. Произведение Quantity и Price.
-    pub struct ItemAmount(Amount);
-}
-
-newtype! {
-    pub struct ItemTax(Tax);
-}
-
-/// Тег ФФД: 1073
-///
-/// Телефоны платежного агента в формате +{Ц}.
-///
-/// Параметр обязательный, если AgentSign передан в значениях:
-///
-/// - bank_paying_agent;
-/// - bank_paying_subagent;
-/// - paying_agent;
-/// - paying_subagent.
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(transparent)]
-pub struct AgentPhones(Vec<Phone>);
-
-/// Тег ФФД: 1074
-///
-/// Телефоны оператора по приему платежей в формате +{Ц}.
-///
-/// Параметр обязательный, если AgentSign передан в значениях paying_agent или paying_subagent.
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(transparent)]
-pub struct ReceiverPhones(Vec<Phone>);
-
-/// Тег ФФД: 1075
-///
-/// Телефоны оператора по приему платежей в формате +{Ц}.
-///
-/// Параметр обязательный, если AgentSign передан в значениях paying_agent или paying_subagent.
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(transparent)]
-pub struct TransferPhones(Vec<Phone>);
-
-newtype! {
-    /// Requirements: <= 12 characters
-    ///
-    /// Тег ФФД: 1016
-    ///
-    /// ИНН оператора перевода. Параметр обязательный, если AgentSign передан в /// значениях bank_paying_agent или bank_paying_subagent.
-    pub struct OperatorInn(Inn);
-}
-
-newtype! {
-    /// Requirements: <= 24 characters
-    ///
-    /// Тег ФФД: 1044
-    ///
-    /// Наименование операции.
-    ///
-    /// Параметр обязательный, если AgentSign передан в значениях bank_paying_agent или bank_paying_subagent.
-    pub struct OperationName(String);
-}
-
-newtype! {
-    /// Телефон в формате +{Ц}.
-    pub struct Phone(String);
-}
-
-newtype! {
-    /// Requirements: <= 64 characters
-    ///
-    /// Тег ФФД: 1026
-    ///
-    /// Наименование оператора перевода.
-    ///
-    /// Параметр обязательный, если AgentSign передан в значениях bank_paying_agent или bank_paying_subagent.
-    pub struct OperatorName(String);
-}
-
-newtype! {
-    /// Requirements: <= 243 characters
-    ///
-    /// Тег ФФД: 1005
-    ///
-    /// Адрес оператора перевода.
-    ///
-    /// Параметр обязательный, если AgentSign передан в значениях bank_paying_agent или bank_paying_subagent.
-    pub struct OperatorAddress(String);
-}
-
-newtype! {
-    /// Тег ФФД: 1191
-    ///
-    /// Дополнительный реквизит предмета расчета.
-    pub struct UserData(String);
-}
-
-newtype! {
-    /// Requirements: <= 3 characters
-    ///
-    /// Тег ФФД: 1230
-    ///
-    /// Цифровой код страны происхождения товара в соответствии с Общероссийским классификатором стран мира — 3 цифры.
-    pub struct CountryCode(String);
-}
-
-newtype! {
-    /// Тег ФФД: 2102
-    ///
-    /// Режим обработки кода маркировки. Должен принимать значение, равное 0.
-    ///
-    /// Включается в чек, если предметом расчета является товар, который подлежит обязательной маркировке сканером — соответствующий код в поле paymentObject.
-    pub struct MarkProcessingMode(String);
-}
-
-newtype! {
-    /// Код маркировки
-    pub struct Value(String);
-}
-
-newtype! {
-    ///
-    /// Тег ФФД: 1293
-    ///
-    /// Числитель дробной части предмета расчета. Значение должно быть строго меньше значения реквизита «знаменатель».
-    pub struct Numerator(u32);
-}
-
-newtype! {
-    /// Тег ФФД: 1294
-    ///
-    /// Знаменатель дробной части предмета расчета. Значение равно количеству товара в партии (упаковке),
-    /// которая имет общий код маркировки товара.
-    pub struct Denominator(u32);
-}
-
-/// Отраслевой реквизит предмета расчета. Указывается только для товаров, которые подлежат
-/// обязательной маркировке сканером. Включение этого реквизита предусмотрено НПА отраслевого
-/// регулирования для соответствующей товарной группы.
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(transparent)]
-pub struct SectoralItemProps(Vec<SectoralItemProp>);
-
-newtype! {
-    /// Тег ФФД: 1262
-    ///
-    /// Идентификатор ФОИВ — федеральный орган исполнительной власти.
-    pub struct FederalId(String);
-}
-
-newtype! {
-    /// Тег ФФД: 1263
-    ///
-    /// Дата нормативного акта ФОИВ.
-    pub struct SectoralDate(DateTime<Utc>);
-}
-
-newtype! {
-    /// Тег ФФД: 1264
-    ///
-    /// Номер нормативного акта ФОИВ.
-    pub struct SectoralNumber(String);
-}
-
-newtype! {
-    /// Тег ФФД: 1265
-    ///
-    /// Состав значений, котрые определены нормативным актом ФОИВ.
-    pub struct SectoralValue(String);
-}
-
-/// Тег ФФД: 1270
-///
-/// Операционный реквизит чека.
-#[derive(Serialize, Deserialize, Debug)]
-pub struct OperatingCheckProps;
-
-/// Тег ФФД: 1261
-///
-/// Отраслевой реквизит чека.
-#[derive(Serialize, Deserialize, Debug)]
-pub struct SectoralCheckProps;
-
-/// Тег ФФД: 1084
-///
-/// Дополнительный реквизит пользователя.
-#[derive(Serialize, Deserialize, Debug)]
-pub struct AddUserProp;
-
-/// Тег ФФД: 1192
-///
-/// Дополнительный реквизит чека (БСО).
-#[derive(Serialize, Deserialize, Debug)]
-pub struct AdditionalCheckProps;
-
-newtype! {
-    /// Requirements: <= 32 characters
-    ///
-    /// Тег ФФД: 1231
-    ///
-    /// Номер таможенной декларации.
-    pub struct DeclarationNumber(String);
-}
-
-newtype! {
-    /// Тег ФФД: 1229
-    ///
-    /// Сумма акциза в рублях с учетом копеек, которая включена в стоимость предмета расчета:
-    ///
-    /// целая часть — не больше 8 знаков;
-    /// дробная часть — не больше 2 знаков;
-    /// значение не может быть отрицательным.
-    pub struct Excise(String);
-}
-
-newtype! {
-    /// ИНН
-    pub struct Inn(String);
-}
-
-newtype! {
-    /// Requirements: <= 239 characters
-    ///
-    /// Тег ФФД: 1225
-    ///
-    /// Наименование поставщика. Параметр обязательный, если передается значение AgentSign в объекте AgentData. Состоит из 239 символов, в которые включаются телефоны поставщика — + 4 символа на каждый телефон.
-    ///
-    /// Например, если передано два телефона поставщика длиной 12 и 14 символов, максимальная длина наименования поставщика будет 239 – (12 + 4) – (14 + 4) = 205 символов.
-    pub struct SupplierName(String);
-}
-
-newtype! {
-    /// Requirements: <= 300 characters
-    ///
-    /// Тег ФФД: 1162
-    ///
-    /// Штрихкод. В зависимости от типа кассы требования к штрихкоду могут отличаться:
-    ///
-    /// АТОЛ Онлайн — шестнадцатеричное представление с пробелами. Максимальная длина — 32 байта (^[a-fA-F0-9]{2}$)|(^([afA-F0-9]{2}\s){1,31}[a-fA-F0-9]{2}$).
-    /// Пример: 00 00 00 01 00 21 FA 41 00 23 05 41 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 12 00 AB 00
-    ///
-    /// CloudKassir — длина строки: четная, от 8 до 150 байт. То есть от 16 до 300 ASCII символов ['0' - '9' , 'A' - 'F' ] шестнадцатеричного представления кода маркировки товара.
-    /// Пример: 303130323930303030630333435
-    ///
-    /// OrangeData — строка, содержащая Base64- кодированный массив от 8 до 32 байт.
-    /// Пример: igQVAAADMTIzNDU2Nzg5MDEyMwAAAAAAAQ==
-    ///
-    /// Если в запросе передается параметр Ean13, который не прошел валидацию, то вернется неуспешный ответ с текстом ошибки в параметре message = Неверный параметр Ean13.
-    pub struct Ean13(String);
-}
-
-newtype! {
-    /// Requirements: <= 8 characters
-    ///
-    /// Количество или вес товара. Максимальное количество символов — 8, где:
-    ///
-    /// целая часть — не больше 5 знаков;
-    /// дробная — не больше 3 знаков для Атол и 2 знаков для CloudPayments.
-    pub struct Quantity(NonZeroU16);
-}
-
-newtype! {
-    /// Код магазина. Для параметра ShopСode нужно использовать значение параметра Submerchant_ID, который возвращается в ответе при регистрации магазинов через XML. Если XML не используется, передавать поле не нужно.
-    pub struct ShopCode(String);
-}
-
-newtype! {
-    /// Тег ФФД: 1228
-    ///
-    /// ИНН клиента.
-    pub struct CustomerInn(Inn);
-}
-
-newtype! {
-    /// Тег ФФД: 1227
-    ///
-    /// Идентификатор/имя клиента.
-    ///
-    /// В параметре можно передавать только email или номер телефона.
-    pub struct Customer(String);
-}
-
 /// Информация по клиенту.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ClientInfo {
-    birthdate: Birthdate,
-    citizenship: Citizenship,
+    birthdate: String,
+    citizenship: String,
     document_code: DocumentCode,
-    document_data: DocumentData,
-    address: Address,
+    document_data: String,
+    address: String,
 }
-
-newtype! {
-    /// Тег ФФД: 1243
-    ///
-    /// Дата рождения клиента в формате ДД.ММ.ГГГГ.
-    pub struct Birthdate(String);
-}
-
-newtype! {
-    /// Тег ФФД: 1244
-    ///
-    /// Числовой код страны, гражданином которой является клиент. Код страны указывается в соответствии с Общероссийским классификатором стран мира [ОКСМ](https://classifikators.ru/oksm).
-    pub struct Citizenship(String);
-}
-
-newtype! {
-    /// Тег ФФД: 1246
-    ///
-    /// Реквизиты документа, удостоверяющего личность. Например, серия и номер паспорта.
-    pub struct DocumentData(String);
-}
-
-newtype! {
-    /// Requirements: <= 256 characters
-    ///
-    /// Тег ФФД: 1254
-    ///
-    /// Адрес клиента-грузополучателя.
-    pub struct Address(String);
-}
-
-newtype! {
-    /// Requirements: <= 64 characters
-    ///
-    /// Тег ФФД: 1008.
-    ///
-    /// Электронная почта клиента. Параметр обязательный, если не передан Phone.
-    pub struct ReceiptEmail(Email);
-}
-
-newtype! {
-    /// Requirements: <= 64 characters
-    ///
-    /// Тег ФФД: 1008.
-    ///
-    /// Телефон клиента в формате +{Ц}. Параметр обязательный, если не передан Email.
-    pub struct ReceiptPhone(Phone);
-}
-
-newtype! {
-    /// Инвариант электронной почты
-    pub struct Email(String);
-}
-
-/// Массив позиций чека с информацией о товарах. Количество товаров в чеке — не больше 100.
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(transparent)]
-pub struct ReceiptItemsFFD105(Vec<ItemFFD105>);
-
-/// Массив с информацией о товарах. Количество товаров в чеке — не больше 100.
-///
-/// Параметры, которые предусмотрены в протоколе для отправки чеков по маркируемым товарам, не являются обязательными для товаров без маркировки.
-///
-/// Если используется ФФД 1.2, но реализуемый товар не подлежит маркировке, поля можно не отправлять или отправить со значением null.
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(transparent)]
-pub struct ReceiptItemsFFD12(Vec<ItemFFD12>);
+pub struct OperatingCheckProps;
 
-newtype! {
-    /// Requirements: <= 14 characters
-    ///
-    /// Тег ФФД: 1031.
-    ///
-    /// Вид оплаты «Наличные». Сумма к оплате в копейках.
-    pub struct Cash(Amount);
-}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SectoralCheckProps;
 
-newtype! {
-    /// Requirements: <= 14 characters
-    ///
-    /// Тег ФФД: 1081.
-    ///
-    /// Вид оплаты «Безналичный».
-    pub struct Electronic(Amount);
-}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AddUserProp;
 
-newtype! {
-    /// Requirements: <= 14 characters
-    ///
-    /// Тег ФФД: 1215.
-    ///
-    /// Вид оплаты «Предварительная оплата (Аванс)».
-    pub struct AdvancePayment(Amount);
-}
-
-newtype! {
-    /// Requirements: <= 14 characters
-    ///
-    /// Тег ФФД: 1216.
-    ///
-    /// Вид оплаты «Постоплата (Кредит)».
-    pub struct Credit(Amount);
-}
-
-newtype! {
-    /// Requirements: <= 14 characters
-    ///
-    /// Тег ФФД: 1217.
-    ///
-    /// Вид оплаты «Иная форма оплаты».
-    pub struct Provision(Amount);
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn builds_ffd105_receipt_with_default_payments() {
-        let item = ReceiptItem105::new("Товар", 10_000, 2, Tax::Vat10).unwrap();
-
-        let receipt = Receipt::ffd105(vec![item], Taxation::Osn)
-            .unwrap()
-            .email("buyer@example.com")
-            .unwrap()
-            .build()
-            .unwrap();
-
-        match receipt {
-            Receipt::FFD105 { payments, .. } => {
-                assert_eq!(payments.total(), 20_000);
-            }
-            Receipt::FFD12 { .. } => panic!("expected FFD105 receipt"),
-        }
-    }
-
-    #[test]
-    fn rejects_receipt_without_contact() {
-        let item = ReceiptItem105::new("Товар", 10_000, 1, Tax::Vat10).unwrap();
-
-        let err = Receipt::ffd105(vec![item], Taxation::Osn)
-            .unwrap()
-            .build()
-            .unwrap_err();
-
-        assert!(matches!(err, ReceiptError::MissingContact));
-    }
-
-    #[test]
-    fn rejects_mismatched_payments_total() {
-        let item = ReceiptItem105::new("Товар", 10_000, 1, Tax::Vat10).unwrap();
-        let payments = Payments::new(5_000).unwrap();
-
-        let err = Receipt::ffd105(vec![item], Taxation::Osn)
-            .unwrap()
-            .email("buyer@example.com")
-            .unwrap()
-            .payments(payments)
-            .build()
-            .unwrap_err();
-
-        assert!(matches!(err, ReceiptError::PaymentsTotalMismatch));
-    }
-}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AdditionalCheckProps;

@@ -1,4 +1,5 @@
-use crate::{Error, InitPaymentReq, InitPaymentRes, newtype};
+use crate::{Error, InitPaymentReq, InitPaymentRes};
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tracing::debug;
 
@@ -50,13 +51,11 @@ pub struct Client {
     terminal_key: TerminalKey,
 }
 
-newtype! {
-    /// Requirements: <= 20 characters
-    ///
-    /// Идентификатор терминала. Выдается мерчанту в Т‑Бизнес при заведении терминала.
-    #[derive(Clone)]
-    pub struct TerminalKey(String);
-}
+/// Requirements: <= 20 characters
+///
+/// Идентификатор терминала. Выдается мерчанту в Т‑Бизнес при заведении терминала.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct TerminalKey(String);
 
 impl TerminalKey {
     pub(crate) fn new(value: String) -> Self {

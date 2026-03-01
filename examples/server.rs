@@ -1,10 +1,4 @@
-use axum::{
-    Router,
-    extract::State,
-    response::IntoResponse,
-    routing::{get, post},
-};
-use serde::{Deserialize, Serialize};
+use axum::{Router, extract::State, routing::post};
 use t_bank_sdk::{Client, CreateToken, Error, InitPaymentReq, InitPaymentRes};
 
 #[tokio::main]
