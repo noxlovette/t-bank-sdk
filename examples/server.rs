@@ -1,12 +1,13 @@
 use axum::{Json, Router, extract::State, routing::post};
-use t_bank_sdk::{Client, CreateToken, Error, InitPaymentReq, InitPaymentRes};
+use t_bank_sdk::{Client, InitPaymentReq, InitPaymentRes};
 
 #[tokio::main]
 async fn main() {
-    // build our application with a single route
-    let app = Router::new().route("/init", post(test_payment));
+    let state = AppState::new().await;
+    let app = Router::<AppState>::new()
+        .route("/init", post(test_payment))
+        .with_state(state);
 
-    // run our app with hyper, listening globally on port 3000
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
@@ -16,25 +17,23 @@ struct AppState {
     client: Client,
 }
 
-#[axum::debug_handler]
-async fn test_payment(State(state): State<AppState>) -> Result<Json<InitPaymentRes>, Error> {
-    let req = InitPaymentReq::new(&state.client.terminal_key(), 1000, "order-1", "token")
-        .unwrap()
-        .create_token(&state.client.password());
-
-    let res = state.client.initiate_payment(req).await?;
-
-    Ok(Json(res))
+impl AppState {
+    async fn new() -> Self {
+        Self {
+            client: Client::new().await.unwrap(),
+        }
+    }
 }
 
-impl IntoResponse for Error {
-    fn into_response(self) -> axum::response::Response {
-        let (status, message) = match self {
-            Self::Api(ref err) => (StatusCode::BAD_REQUEST, err.to_string()),
-            Self::Config(ref err) => (StatusCode::SERVICE_UNAVAILABLE, err.to_string()),
-            Self::Server(ref err) => (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()),
-        };
+#[axum::debug_handler]
+async fn test_payment(State(state): State<AppState>) -> Json<InitPaymentRes> {
+    let payload = InitPaymentReq::new(state.client.terminal_key(), 1000, "order-1");
 
-        (status, message).into_response()
-    }
+    let res = state
+        .client
+        .initiate_payment(payload)
+        .await
+        .expect("unable to initiate payment");
+
+    Json(res)
 }

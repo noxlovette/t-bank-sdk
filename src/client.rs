@@ -1,4 +1,4 @@
-use crate::{Error, InitPaymentReq, InitPaymentRes};
+use crate::{Error, InitPaymentReq, InitPaymentRes, TokenWrapper};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tracing::debug;
@@ -80,6 +80,19 @@ impl Password {
         Ok(Self(p))
     }
 }
+
+impl From<Password> for String {
+    fn from(value: Password) -> Self {
+        value.0
+    }
+}
+
+impl From<&Password> for String {
+    fn from(value: &Password) -> Self {
+        value.0.clone()
+    }
+}
+
 impl Client {
     /// Создать клиента для указанного окружения.  
     pub async fn new() -> Result<Self, Error> {
@@ -111,12 +124,12 @@ impl Client {
         })
     }
 
-    pub fn password(&self) -> String {
-        self.password.0.clone()
+    pub fn password(&self) -> &Password {
+        &self.password
     }
 
-    pub fn terminal_key(&self) -> String {
-        self.terminal_key.0.clone()
+    pub fn terminal_key(&self) -> &TerminalKey {
+        &self.terminal_key
     }
 }
 
@@ -125,7 +138,9 @@ impl Client {
         format!("{}/{}", self.env.base_url(), path.trim_start_matches('/'))
     }
 
-    pub async fn initiate_payment(&self, req: InitPaymentReq) -> Result<InitPaymentRes, Error> {
+    pub async fn initiate_payment(&self, payload: InitPaymentReq) -> Result<InitPaymentRes, Error> {
+        let req = TokenWrapper::from_payload(payload, &self.password());
+
         let res = self
             .client
             .post(self.url("Init"))

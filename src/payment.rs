@@ -5,7 +5,7 @@ use std::fmt::{self, Display};
 use url::Url;
 
 /// Запрос для инициации платежа
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 #[serde(rename_all = "PascalCase")]
 pub struct InitPaymentReq {
     pub terminal_key: TerminalKey,
@@ -18,8 +18,6 @@ pub struct InitPaymentReq {
     pub amount: u32,
     /// Идентификатор заказа в системе мерчанта. Должен быть уникальным для каждой операции.
     pub order_id: String,
-    /// Подпись запроса. [Как сформировать.](https://developer.tbank.ru/eacq/intro/developer/token)
-    pub token: String,
     /// Описание заказа. Значение параметра будет отображено на платежной форме.
     ///
     // Параметр обязательный при привязке и одновременной оплате через СБП. При оплате через СБП текст из этого параметра отобразится в мобильном банке клиента.
@@ -70,8 +68,19 @@ pub struct InitPaymentReq {
     pub shops: Vec<Shop>,
 }
 
+impl InitPaymentReq {
+    pub fn new(terminal_key: &TerminalKey, amount: u32, order_id: &str) -> Self {
+        Self {
+            terminal_key: terminal_key.clone(),
+            amount,
+            order_id: order_id.to_ascii_lowercase(),
+            ..Default::default()
+        }
+    }
+}
+
 /// Ответ инициатора платежа
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "PascalCase")]
 pub struct InitPaymentRes {
     pub terminal_key: TerminalKey,

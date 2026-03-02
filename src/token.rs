@@ -1,24 +1,56 @@
-use crate::InitPaymentReq;
-use serde::Serialize;
+use crate::{InitPaymentReq, Password};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 
-/// Creates a request token according to T-Bank's signing rules.
-pub trait CreateToken {
-    /// Builds a SHA-256 token from root-level request fields and the provided password.
-    fn create_token(self, password: &str) -> Self;
+/// Подпись запроса. [Как сформировать.](https://developer.tbank.ru/eacq/intro/developer/token)
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(transparent)]
+pub struct Token(String);
+
+impl Token {
+    fn from_string(s: String) -> Self {
+        Self(s)
+    }
 }
 
-impl CreateToken for InitPaymentReq {
-    fn create_token(mut self, password: &str) -> Self {
+/// This wrapper will generate a token for given payload
+#[derive(Serialize, Deserialize, Debug)]
+pub struct TokenWrapper<P>
+where
+    P: DeriveToken,
+{
+    token: Token,
+    #[serde(flatten)]
+    payload: P,
+}
+
+impl<P> TokenWrapper<P>
+where
+    P: DeriveToken,
+{
+    pub fn from_payload(payload: P, password: &Password) -> Self {
+        let token = payload.create_token(password);
+        Self { payload, token }
+    }
+}
+
+/// Creates a request token according to T-Bank's signing rules.
+pub trait DeriveToken {
+    /// Builds a SHA-256 token from root-level request fields and the provided password.
+    fn create_token(&self, password: &Password) -> Token;
+}
+
+impl DeriveToken for InitPaymentReq {
+    fn create_token(&self, password: &Password) -> Token {
         let mut fields = BTreeMap::from([
             (String::from("Amount"), serialize_token_value(&self.amount)),
             (
                 String::from("OrderId"),
                 serialize_token_value(&self.order_id),
             ),
-            (String::from("Password"), String::from(password)),
+            (String::from("Password"), password.into()),
             (
                 String::from("TerminalKey"),
                 serialize_token_value(&self.terminal_key),
@@ -62,8 +94,7 @@ impl CreateToken for InitPaymentReq {
         let joined_values = fields.into_values().collect::<String>();
         let hash = Sha256::digest(joined_values.as_bytes());
 
-        self.token = format!("{hash:x}");
-        self
+        Token::from_string(format!("{hash:x}"))
     }
 }
 
