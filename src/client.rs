@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tracing::debug;
 
-pub const PRODUCTION_BASE: &str = "https://securepay.tinkoff/v2/Init";
-pub const TEST_BASE: &str = "https://rest-api-test.tinkoff/v2/Init";
+pub const PRODUCTION_BASE: &str = "https://securepay.tinkoff.ru/v2";
+pub const TEST_BASE: &str = "https://rest-api-test.tinkoff.ru/v2";
 
 #[derive(Clone, Debug, Default)]
 pub enum Environment {
@@ -96,8 +96,6 @@ impl From<&Password> for String {
 impl Client {
     /// Создать клиента для указанного окружения.  
     pub async fn new() -> Result<Self, Error> {
-        tracing_subscriber::fmt::init();
-
         let version = env!("CARGO_PKG_VERSION");
 
         debug!("Initializing T-Bank SDK client v{version}");
@@ -141,12 +139,15 @@ impl Client {
     pub async fn initiate_payment(&self, payload: InitPaymentReq) -> Result<InitPaymentRes, Error> {
         let req = TokenWrapper::from_payload(payload, &self.password());
 
+        println!("{:?}", req);
+
         let res = self
             .client
             .post(self.url("Init"))
             .json(&req)
             .send()
             .await?
+            .error_for_status()?
             .json::<InitPaymentRes>()
             .await?;
 
