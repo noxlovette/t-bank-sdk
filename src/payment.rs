@@ -84,6 +84,10 @@ impl InitPaymentReq {
 #[serde(rename_all = "PascalCase")]
 pub struct InitPaymentRes {
     pub terminal_key: TerminalKey,
+    /// Requirements: <= 20 characters
+    ///
+    /// Статус транзакции.
+    pub status: String,
     /// Requirements: <= 20 chars
     ///
     /// Сумма в копейках.
@@ -92,30 +96,14 @@ pub struct InitPaymentRes {
     ///
     /// Идентификатор заказа в системе мерчанта. Должен быть уникальным для каждой операции.
     pub order_id: String,
-    /// Успешность прохождения запроса — true/false.
-    pub success: bool,
-    ///  Requirements: <= 20 characters
-    ///
-    /// Статус транзакции.
-    pub status: String,
     /// Requirements: <= 20 characters
     ///
     /// Идентификатор платежа в системе Т‑Бизнес.
     pub payment_id: String,
-    /// Requirements: <= 20 characters
-    ///
-    /// Код ошибки.
-    pub error_code: String,
-    ///Requirements: <= 100 characters
+    /// Requirements: <= 100 characters
     ///
     /// Ссылка на платежную форму. Параметр возвращается только для мерчантов, которые используют платежную форму Т-Банка.
     pub payment_url: Option<Url>,
-    /// Requirements: <= 255 characters
-    ///
-    /// Краткое описание ошибки.
-    pub message: Option<String>,
-    /// Подробное описание ошибки.
-    pub details: Option<String>,
 }
 
 /// JSON-объект с дополнительными параметрами по операции и настройками в формате ключ:значение.

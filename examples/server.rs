@@ -1,6 +1,5 @@
 use axum::{Json, Router, extract::State, routing::post};
-use t_bank_sdk::{Client, InitPaymentReq, InitPaymentRes};
-use tracing::debug;
+use t_bank_sdk::{Client, ErrorWrapper, InitPaymentReq, InitPaymentRes};
 
 #[tokio::main]
 async fn main() {
@@ -30,7 +29,7 @@ impl AppState {
 }
 
 #[axum::debug_handler]
-async fn test_payment(State(state): State<AppState>) -> Json<InitPaymentRes> {
+async fn test_payment(State(state): State<AppState>) -> Json<ErrorWrapper<InitPaymentRes>> {
     let payload = InitPaymentReq::new(state.client.terminal_key(), 1000, "order-1");
 
     let res = state

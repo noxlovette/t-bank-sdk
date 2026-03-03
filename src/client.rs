@@ -1,4 +1,4 @@
-use crate::{Error, InitPaymentReq, InitPaymentRes, TokenWrapper};
+use crate::{Error, HandlerResult, InitPaymentReq, InitPaymentRes, TokenWrapper};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tracing::debug;
@@ -136,20 +136,19 @@ impl Client {
         format!("{}/{}", self.env.base_url(), path.trim_start_matches('/'))
     }
 
-    pub async fn initiate_payment(&self, payload: InitPaymentReq) -> Result<InitPaymentRes, Error> {
+    pub async fn initiate_payment(&self, payload: InitPaymentReq) -> HandlerResult<InitPaymentRes> {
         let req = TokenWrapper::from_payload(payload, &self.password());
 
         println!("{:?}", req);
-
         let res = self
             .client
             .post(self.url("Init"))
             .json(&req)
             .send()
             .await?
-            .error_for_status()?
-            .json::<InitPaymentRes>()
+            .json()
             .await?;
+        println!("{:?}", res);
 
         Ok(res)
     }

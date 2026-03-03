@@ -17,6 +17,7 @@ impl Token {
 
 /// This wrapper will generate a token for given payload
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "PascalCase")]
 pub struct TokenWrapper<P>
 where
     P: DeriveToken,
