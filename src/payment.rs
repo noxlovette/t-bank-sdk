@@ -21,32 +21,40 @@ pub struct InitPaymentReq {
     /// Описание заказа. Значение параметра будет отображено на платежной форме.
     ///
     // Параметр обязательный при привязке и одновременной оплате через СБП. При оплате через СБП текст из этого параметра отобразится в мобильном банке клиента.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     /// Идентификатор покупателя в системе мерчанта. Нужен для сохранения карт на платежной форме — платежи в один клик.
     ///
     /// Параметр обязательный, если передан параметр Recurrent=Y и автоплатеж проводится по карте.
     ///
     /// Если передан, в уведомлении будут указаны [CustomerKey] и его CardId. Подробнее — в методе [Получить список карт клиента](https://developer.tbank.ru/eacq/api/get-card-list).
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub customer_key: Option<String>,
     /// Признак родительского CC-платежа. Обязателен для проведения операции с сохранением реквизитов карты покупателя.
     ///
     /// Если передается и установлен в Y, при платеже будут сохранены реквизиты карты покупателя. В этом случае после оплаты в уведомлении на AUTHORIZED будет передан параметр RebillId для использования в методе [Провести платеж по сохраненным реквизитам](https://developer.tbank.ru/eacq/api/charge). Для привязки и одновременной оплаты по CБП передавайте Y.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub recurrent: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub pay_type: Option<PayType>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub language: Option<Language>,
     /// URL на веб-сайте мерчанта, куда будет отправлен POST-запрос о статусе выполнения вызываемых методов — настраивается в личном кабинете.
     ///
     /// Если параметр передан, используется его значение, если нет — значение из настроек терминала.
     ///
     /// [Подробнее](https://developer.tbank.ru/eacq/intro/developer/notification)
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub notification_url: Option<Url>,
     /// URL на веб-сайте мерчанта, куда будет переведен клиент в случае успешной оплаты — настраивается в личном кабинете.
     ///
     /// Если параметр передан, используется его значение, если нет — значение из настроек терминала.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub success_url: Option<Url>,
     /// URL на веб-сайте мерчанта, куда будет переведен клиент в случае неуспешной оплаты — настраивается в личном кабинете.
     ///
     /// Если параметр передан, используется его значение, если нет — значение из настроек терминала.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub fail_url: Option<Url>,
     /// Cрок жизни ссылки или динамического QR-кода СБП, если выбран этот способ оплаты.
     ///
@@ -61,10 +69,14 @@ pub struct InitPaymentReq {
     ///
     /// больше нуля — оно будет установлено в качестве срока жизни ссылки или динамического QR-кода;
     /// меньше нуля — устанавливается значение по умолчанию: 1440 мин. (1 сутки).
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub redirect_due_date: Option<DateTime<Utc>>,
     #[serde(rename = "DATA")]
-    pub data: Option<Data>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub receipt: Option<Receipt>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub shops: Vec<Shop>,
 }
 
@@ -76,6 +88,16 @@ impl InitPaymentReq {
             order_id: order_id.to_ascii_lowercase(),
             ..Default::default()
         }
+    }
+
+    pub fn receipt(mut self, receipt: Receipt) -> Self {
+        self.receipt = Some(receipt);
+        self
+    }
+
+    pub fn data(mut self, data: serde_json::Value) -> Self {
+        self.data = Some(data);
+        self
     }
 }
 
@@ -221,6 +243,8 @@ pub struct OperationInitiatorType;
 
 #[cfg(test)]
 mod test {
+    use crate::{InitPaymentReq, ItemFFD105, Receipt, Taxation, TerminalKey};
+    use serde_json::json;
 
     #[test]
     fn parse_request() {
@@ -228,6 +252,53 @@ mod test {
         {"TerminalKey":"TBankTest","Amount":140000,"OrderId":"21090","Description":"Подарочная карта на 1000 рублей","Token":"68711168852240a2f34b6a8b19d2cfbd296c7d2a6dff8b23eda6278985959346","DATA":{"Phone":"+71234567890","Email":"a@test.com"},"Receipt":{"Email":"a@test.ru","Phone":"+79031234567","Taxation":"osn","Items":[{"Name":"Наименование товара 1","Price":10000,"Quantity":1,"Amount":10000,"Tax":"vat10","Ean13":"303130323930303030630333435"},{"Name":"Наименование товара 2","Price":20000,"Quantity":2,"Amount":40000,"Tax":"vat20"},{"Name":"Наименование товара 3","Price":30000,"Quantity":3,"Amount":90000,"Tax":"vat10"}]}}
         "#;
         let _ = json;
+    }
+
+    #[test]
+    fn receipt_serializes_without_ffd_wrapper() {
+        let payload = InitPaymentReq::new(&TerminalKey::default(), 1000, "32451")
+            .receipt(Receipt::FFD105 {
+                items: vec![ItemFFD105 {
+                    name: "Item1".to_string(),
+                    price: 1000,
+                    quantity: 1,
+                    amount: 1000,
+                    ..Default::default()
+                }],
+                ffd_version: None,
+                email: Some("a@test.com".to_string()),
+                phone: None,
+                taxation: Taxation::UsnIncome,
+                payments: None,
+            })
+            .data(json!({
+                "Phone": "%2B71234567890",
+                "Email": "a%40test.com",
+            }));
+
+        let value = serde_json::to_value(payload).unwrap();
+
+        assert!(value["Receipt"].get("FFD105").is_none());
+        assert_eq!(value["Receipt"]["Items"][0]["Name"], "Item1");
+    }
+
+    #[test]
+    fn init_payment_omits_absent_root_fields() {
+        let payload = InitPaymentReq::new(&TerminalKey::default(), 1000, "32451");
+        let value = serde_json::to_value(payload).unwrap();
+
+        assert!(value.get("Description").is_none());
+        assert!(value.get("CustomerKey").is_none());
+        assert!(value.get("Recurrent").is_none());
+        assert!(value.get("PayType").is_none());
+        assert!(value.get("Language").is_none());
+        assert!(value.get("NotificationUrl").is_none());
+        assert!(value.get("SuccessUrl").is_none());
+        assert!(value.get("FailUrl").is_none());
+        assert!(value.get("RedirectDueDate").is_none());
+        assert!(value.get("DATA").is_none());
+        assert!(value.get("Receipt").is_none());
+        assert!(value.get("Shops").is_none());
     }
 
     #[test]

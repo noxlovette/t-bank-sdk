@@ -4,7 +4,7 @@ use strum::Display;
 
 /// JSON-объект с данными чека. Параметр обязательный, если подключена онлайн-касса.
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "PascalCase")]
+#[serde(rename_all_fields = "PascalCase", untagged)]
 pub enum Receipt {
     FFD105 {
         /// Массив позиций чека с информацией о товарах. Количество товаров в чеке — не больше 100.
@@ -23,7 +23,7 @@ pub enum Receipt {
         /// Телефон клиента в формате +{Ц}. Параметр обязательный, если не передан Email.
         phone: Option<String>,
         taxation: Taxation,
-        payments: Payments,
+        payments: Option<Payments>,
     },
     FFD12 {
         /// Массив с информацией о товарах. Количество товаров в чеке — не больше 100.
@@ -66,31 +66,31 @@ pub enum Receipt {
 }
 
 /// Позиция чека с информацией о товарах.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "PascalCase")]
 pub struct ItemFFD105 {
     /// Тег ФФД: 1030
     ///
     /// Наименование товара.
-    name: String,
+    pub name: String,
     /// Тег ФФД: 1078
     ///
     /// Цена в копейках.
-    price: u32,
+    pub price: u32,
     /// Тег ФФД: 1023
     ///
     /// Количество или вес товара.
-    quantity: u16,
+    pub quantity: u16,
     /// Тег ФФД: 1043
     ///
     /// Стоимость товара в копейках. Произведение Quantity и Price.
-    amount: u32,
-    payment_method: PaymentMethod,
-    payment_object: PaymentObjectFF105,
-    tax: Tax,
-    ean_13: Option<String>,
-    agent_data: Option<AgentData>,
-    supplier_info: Option<SupplierInfo>,
+    pub amount: u32,
+    pub payment_method: PaymentMethod,
+    pub payment_object: PaymentObjectFF105,
+    pub tax: Tax,
+    pub ean_13: Option<String>,
+    pub agent_data: Option<AgentData>,
+    pub supplier_info: Option<SupplierInfo>,
 }
 
 /// Позиция чека с информацией о товарах.
@@ -518,9 +518,10 @@ enum PaymentObjectFF12 {
 /// - vat110 — НДС чека по расчетной ставке 10/110;
 /// - vat120 — НДС чека по расчетной ставке 20/120;
 /// - vat122 — НДС чека по расчетной ставке 22/122 (с 01.01.2026).
-#[derive(Serialize, Deserialize, Debug, Display)]
+#[derive(Serialize, Deserialize, Debug, Display, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum Tax {
+    #[default]
     None,
     Vat0,
     Vat5,
@@ -546,11 +547,12 @@ pub enum Tax {
 /// - usn_income_outcome — упрощенная СН (доходы минус расходы). Налоговая автоматически определит АУСН по ИНН и пробьет чеки с нужной СНО;
 /// - esn — единый сельскохозяйственный налог;
 /// - patent — патентная СН.
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "lowercase")]
+#[derive(Serialize, Deserialize, Debug, Default)]
+#[serde(rename_all = "snake_case")]
 pub enum Taxation {
-    Osn,
     UsnIncome,
+    #[default]
+    Osn,
     UsnIncomeOutcome,
     Esn,
     Patent,
