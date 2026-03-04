@@ -43,7 +43,7 @@ async fn test_payment(State(state): State<AppState>) -> Json<ErrorWrapper<InitPa
         amount: 1000,
         ..Default::default()
     }];
-    let payload = InitPaymentReq::new(state.client.terminal_key(), 1000, "32451")
+    let payload = InitPaymentReq::new(state.client.terminal_key(), 1000, "32453")
         .receipt(Receipt::FFD105 {
             items,
             ffd_version: None,

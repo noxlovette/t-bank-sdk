@@ -45,16 +45,19 @@ pub struct InitPaymentReq {
     ///
     /// [Подробнее](https://developer.tbank.ru/eacq/intro/developer/notification)
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "NotificationURL")]
     pub notification_url: Option<Url>,
     /// URL на веб-сайте мерчанта, куда будет переведен клиент в случае успешной оплаты — настраивается в личном кабинете.
     ///
     /// Если параметр передан, используется его значение, если нет — значение из настроек терминала.
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "SuccessURL")]
     pub success_url: Option<Url>,
     /// URL на веб-сайте мерчанта, куда будет переведен клиент в случае неуспешной оплаты — настраивается в личном кабинете.
     ///
     /// Если параметр передан, используется его значение, если нет — значение из настроек терминала.
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "FailURL")]
     pub fail_url: Option<Url>,
     /// Cрок жизни ссылки или динамического QR-кода СБП, если выбран этот способ оплаты.
     ///
@@ -125,6 +128,7 @@ pub struct InitPaymentRes {
     /// Requirements: <= 100 characters
     ///
     /// Ссылка на платежную форму. Параметр возвращается только для мерчантов, которые используют платежную форму Т-Банка.
+    #[serde(rename = "PaymentURL")]
     pub payment_url: Option<Url>,
 }
 
