@@ -1,5 +1,5 @@
 use crate::{Receipt, TerminalKey};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use std::fmt::{self, Display};
 use url::Url;
@@ -93,13 +93,65 @@ impl InitPaymentReq {
         }
     }
 
-    pub fn receipt(mut self, receipt: Receipt) -> Self {
-        self.receipt = Some(receipt);
+    pub fn description(mut self, description: &str) -> Self {
+        self.description = Some(description.to_string());
+        self
+    }
+
+    pub fn customer_key(mut self, ck: &str) -> Self {
+        self.customer_key = Some(ck.to_string());
+        self
+    }
+
+    pub fn recurrent(mut self) -> Self {
+        self.recurrent = Some("Y".to_string());
+        self
+    }
+
+    pub fn pay_type(mut self, pt: PayType) -> Self {
+        self.pay_type = Some(pt);
+        self
+    }
+
+    pub fn language(mut self, l: Language) -> Self {
+        self.language = Some(l);
+        self
+    }
+
+    pub fn notification_url(mut self, url: &str) -> Self {
+        self.notification_url = Url::parse(url).ok();
+        self
+    }
+
+    pub fn success_url(mut self, url: &str) -> Self {
+        self.success_url = Url::parse(url).ok();
+        self
+    }
+
+    pub fn fail_url(mut self, url: &str) -> Self {
+        self.fail_url = Url::parse(url).ok();
+        self
+    }
+
+    pub fn redirect_due_date(mut self, rdd: DateTime<Utc>) -> Self {
+        let valid = |d| d > Duration::minutes(1) && d > Duration::days(90);
+
+        self.redirect_due_date = valid(rdd - Utc::now()).then_some(rdd);
         self
     }
 
     pub fn data(mut self, data: serde_json::Value) -> Self {
         self.data = Some(data);
+        self
+    }
+
+    pub fn receipt(mut self, receipt: Receipt) -> Self {
+        self.receipt = Some(receipt);
+        self
+    }
+
+    pub fn shops(mut self, shops: Vec<Shop>) -> Self {
+        self.shops = shops;
         self
     }
 }
@@ -228,6 +280,27 @@ pub struct Shop {
     fee: Option<String>,
 }
 
+impl Shop {
+    pub fn new(shop_code: &str, amount: u32) -> Self {
+        Self {
+            shop_code: shop_code.to_string(),
+            amount,
+            name: None,
+            fee: None,
+        }
+    }
+
+    pub fn name(mut self, name: &str) -> Self {
+        self.name = Some(name.to_string());
+        self
+    }
+
+    pub fn fee(mut self, fee: &str) -> Self {
+        self.fee = Some(fee.to_string());
+        self
+    }
+}
+
 /// Requirements: [0, 1, 2, R, I, D, N]
 ///
 /// Признак инициатора операции для платежа. Параметр обязательный при создании родительского CC-платежа при оплате картой.
@@ -247,7 +320,7 @@ pub struct OperationInitiatorType;
 
 #[cfg(test)]
 mod test {
-    use crate::{InitPaymentReq, ItemFFD105, Receipt, Taxation, TerminalKey};
+    use crate::{InitPaymentReq, ItemFFD105, Receipt, Shop, Tax, Taxation, TerminalKey};
     use serde_json::json;
 
     #[test]
@@ -261,20 +334,13 @@ mod test {
     #[test]
     fn receipt_serializes_without_ffd_wrapper() {
         let payload = InitPaymentReq::new(&TerminalKey::default(), 1000, "32451")
-            .receipt(Receipt::FFD105 {
-                items: vec![ItemFFD105 {
-                    name: "Item1".to_string(),
-                    price: 1000,
-                    quantity: 1,
-                    amount: 1000,
-                    ..Default::default()
-                }],
-                ffd_version: None,
-                email: Some("a@test.com".to_string()),
-                phone: None,
-                taxation: Taxation::UsnIncome,
-                payments: None,
-            })
+            .receipt(
+                Receipt::ffd105(
+                    vec![ItemFFD105::new("Item1", 1000, 1, 1000).tax(Tax::Vat20)],
+                    Taxation::UsnIncome,
+                )
+                .email("a@test.com"),
+            )
             .data(json!({
                 "Phone": "%2B71234567890",
                 "Email": "a%40test.com",
@@ -284,6 +350,17 @@ mod test {
 
         assert!(value["Receipt"].get("FFD105").is_none());
         assert_eq!(value["Receipt"]["Items"][0]["Name"], "Item1");
+    }
+
+    #[test]
+    fn shops_serialize_from_builder() {
+        let payload = InitPaymentReq::new(&TerminalKey::default(), 1000, "32451")
+            .shops(vec![Shop::new("submerchant-1", 1000).name("Shop 1")]);
+        let value = serde_json::to_value(payload).unwrap();
+
+        assert_eq!(value["Shops"][0]["ShopCode"], "submerchant-1");
+        assert_eq!(value["Shops"][0]["Amount"], 1000);
+        assert_eq!(value["Shops"][0]["Name"], "Shop 1");
     }
 
     #[test]

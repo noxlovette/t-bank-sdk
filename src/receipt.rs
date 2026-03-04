@@ -65,6 +65,75 @@ pub enum Receipt {
     },
 }
 
+impl Receipt {
+    pub fn ffd105(items: Vec<ItemFFD105>, taxation: Taxation) -> Self {
+        Self::FFD105 {
+            items,
+            ffd_version: None,
+            email: None,
+            phone: None,
+            taxation,
+            payments: None,
+        }
+    }
+
+    pub fn ffd12(items: Vec<ItemFFD12>, taxation: Taxation) -> Self {
+        Self::FFD12 {
+            items,
+            ffd_vesrion: None,
+            client_info: None,
+            taxation,
+            email: None,
+            phone: None,
+            customer: None,
+            customer_inn: None,
+            payments: None,
+            operating_check_props: None,
+            sectoral_check_props: None,
+            add_user_prop: None,
+            additional_check_props: None,
+        }
+    }
+
+    pub fn ffd_version(mut self, version: FfdVersion) -> Self {
+        match &mut self {
+            Self::FFD105 { ffd_version, .. } => *ffd_version = Some(version),
+            Self::FFD12 { ffd_vesrion, .. } => *ffd_vesrion = Some(version),
+        }
+        self
+    }
+
+    pub fn email(mut self, email: &str) -> Self {
+        match &mut self {
+            Self::FFD105 { email: value, .. } | Self::FFD12 { email: value, .. } => {
+                *value = Some(email.to_string())
+            }
+        }
+        self
+    }
+
+    pub fn phone(mut self, phone: &str) -> Self {
+        match &mut self {
+            Self::FFD105 { phone: value, .. } | Self::FFD12 { phone: value, .. } => {
+                *value = Some(phone.to_string())
+            }
+        }
+        self
+    }
+
+    pub fn payments(mut self, payments: Payments) -> Self {
+        match &mut self {
+            Self::FFD105 {
+                payments: value, ..
+            }
+            | Self::FFD12 {
+                payments: value, ..
+            } => *value = Some(payments),
+        }
+        self
+    }
+}
+
 /// Позиция чека с информацией о товарах.
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "PascalCase")]
@@ -93,8 +162,50 @@ pub struct ItemFFD105 {
     pub supplier_info: Option<SupplierInfo>,
 }
 
+impl ItemFFD105 {
+    pub fn new(name: &str, price: u32, quantity: u16, amount: u32) -> Self {
+        Self {
+            name: name.to_string(),
+            price,
+            quantity,
+            amount,
+            ..Default::default()
+        }
+    }
+
+    pub fn payment_method(mut self, payment_method: PaymentMethod) -> Self {
+        self.payment_method = payment_method;
+        self
+    }
+
+    pub fn payment_object(mut self, payment_object: PaymentObjectFF105) -> Self {
+        self.payment_object = payment_object;
+        self
+    }
+
+    pub fn tax(mut self, tax: Tax) -> Self {
+        self.tax = tax;
+        self
+    }
+
+    pub fn ean_13(mut self, ean_13: &str) -> Self {
+        self.ean_13 = Some(ean_13.to_string());
+        self
+    }
+
+    pub fn agent_data(mut self, agent_data: AgentData) -> Self {
+        self.agent_data = Some(agent_data);
+        self
+    }
+
+    pub fn supplier_info(mut self, supplier_info: SupplierInfo) -> Self {
+        self.supplier_info = Some(supplier_info);
+        self
+    }
+}
+
 /// Позиция чека с информацией о товарах.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "PascalCase")]
 pub struct ItemFFD12 {
     agent_data: AgentData,
@@ -162,6 +273,69 @@ pub struct ItemFFD12 {
     sectoral_item_props: SectoralItemProps,
 }
 
+impl ItemFFD12 {
+    pub fn new(name: &str, price: u32, quantity: u16, amount: u32) -> Self {
+        Self {
+            name: name.to_string(),
+            price,
+            quantity,
+            amount,
+            mark_processing_mode: "0".to_string(),
+            ..Default::default()
+        }
+    }
+
+    pub fn payment_method(mut self, payment_method: PaymentMethod) -> Self {
+        self.payment_method = payment_method;
+        self
+    }
+
+    pub fn tax(mut self, tax: Tax) -> Self {
+        self.tax = tax;
+        self
+    }
+
+    pub fn user_data(mut self, user_data: &str) -> Self {
+        self.user_data = user_data.to_string();
+        self
+    }
+
+    pub fn excise(mut self, excise: &str) -> Self {
+        self.excise = excise.to_string();
+        self
+    }
+
+    pub fn country_code(mut self, country_code: &str) -> Self {
+        self.country_code = country_code.to_string();
+        self
+    }
+
+    pub fn declaration_number(mut self, declaration_number: &str) -> Self {
+        self.declaration_number = declaration_number.to_string();
+        self
+    }
+
+    pub fn measurement_unit(mut self, measurement_unit: MeasurementUnit) -> Self {
+        self.measurement_unit = measurement_unit;
+        self
+    }
+
+    pub fn mark_processing_mode(mut self, mark_processing_mode: &str) -> Self {
+        self.mark_processing_mode = mark_processing_mode.to_string();
+        self
+    }
+
+    pub fn agent_data(mut self, agent_data: AgentData) -> Self {
+        self.agent_data = agent_data;
+        self
+    }
+
+    pub fn supplier_info(mut self, supplier_info: SupplierInfo) -> Self {
+        self.supplier_info = supplier_info;
+        self
+    }
+}
+
 /// Данные агента. Параметр обязательный, если используется агентская схема.
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "PascalCase")]
@@ -176,7 +350,22 @@ pub struct AgentData {
     perator_inn: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+impl Default for AgentData {
+    fn default() -> Self {
+        Self {
+            agent_sign: AgentSign::Another,
+            operation_name: String::new(),
+            phones: Vec::new(),
+            receiver_phones: Vec::new(),
+            transfer_phones: Vec::new(),
+            operator_name: String::new(),
+            operator_address: String::new(),
+            perator_inn: String::new(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "PascalCase")]
 pub struct SupplierInfo {
     phones: Vec<String>,
@@ -204,7 +393,7 @@ pub struct MarkCode {
 /// Пример:
 ///
 /// { "numenator": "1" "denominator" "2" }
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "PascalCase")]
 pub struct MarkQuantity {
     numerator: u32,
@@ -212,7 +401,7 @@ pub struct MarkQuantity {
 }
 
 /// Отраслевой реквизит предмета расчета.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "PascalCase")]
 pub struct SectoralItemProps {
     /// Тег ФФД: 1262
@@ -246,6 +435,38 @@ pub struct Payments {
     advance_payment: Option<u32>,
     credit: Option<u32>,
     provision: Option<u32>,
+}
+
+impl Payments {
+    pub fn new(electronic: u32) -> Self {
+        Self {
+            electronic,
+            cash: None,
+            advance_payment: None,
+            credit: None,
+            provision: None,
+        }
+    }
+
+    pub fn cash(mut self, cash: u32) -> Self {
+        self.cash = Some(cash);
+        self
+    }
+
+    pub fn advance_payment(mut self, advance_payment: u32) -> Self {
+        self.advance_payment = Some(advance_payment);
+        self
+    }
+
+    pub fn credit(mut self, credit: u32) -> Self {
+        self.credit = Some(credit);
+        self
+    }
+
+    pub fn provision(mut self, provision: u32) -> Self {
+        self.provision = Some(provision);
+        self
+    }
 }
 
 /// Requirements: [bank_paying_agent, bank_paying_subagent, paying_agent, paying_subagent, attorney, commission_agent, another]
@@ -301,7 +522,7 @@ enum MarkCodeType {
     Rawcode,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub enum MeasurementUnit {
     #[serde(rename = "шт")]
     Piece,
@@ -352,6 +573,7 @@ pub enum MeasurementUnit {
     #[serde(rename = "Тбайт")]
     Terabyte,
     #[serde(rename = "-")]
+    #[default]
     Other,
 }
 
