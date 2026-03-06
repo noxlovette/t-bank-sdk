@@ -36,22 +36,14 @@ impl AppState {
 
 #[axum::debug_handler]
 async fn test_payment(State(state): State<AppState>) -> Json<ErrorWrapper<InitPaymentRes>> {
-    let items = vec![ItemFFD105 {
-        name: "Item1".to_string(),
-        price: 1000,
-        quantity: 1,
-        amount: 1000,
-        ..Default::default()
-    }];
     let payload = InitPaymentReq::new(state.client.terminal_key(), 1000, "32453")
-        .receipt(Receipt::FFD105 {
-            items,
-            ffd_version: None,
-            email: Some("danila.volkov@noxlovette.com".to_string()),
-            phone: None,
-            taxation: t_bank_sdk::Taxation::UsnIncome,
-            payments: None,
-        })
+        .receipt(
+            Receipt::ffd105(
+                vec![ItemFFD105::new("Item1", 1000, 1, 1000)],
+                t_bank_sdk::Taxation::UsnIncome,
+            )
+            .email("danila.o.volkov@noxlovette.com"),
+        )
         .data(json!({
             "Phone": urlencode("+71234567890"),
             "Email": urlencode("a@test.com"),
