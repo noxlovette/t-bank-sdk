@@ -3,11 +3,13 @@ use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use std::fmt::{self, Display};
 use url::Url;
+use utoipa::ToSchema;
 
 /// Запрос для инициации платежа
-#[derive(Debug, Serialize, Default)]
+#[derive(Debug, Serialize, Default, ToSchema)]
 #[serde(rename_all = "PascalCase")]
 pub struct InitPaymentReq {
+    #[schema(value_type = String)]
     pub terminal_key: TerminalKey,
     /// Сумма в копейках.
     ///
@@ -46,18 +48,21 @@ pub struct InitPaymentReq {
     /// [Подробнее](https://developer.tbank.ru/eacq/intro/developer/notification)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "NotificationURL")]
+    #[schema(value_type = String)]
     pub notification_url: Option<Url>,
     /// URL на веб-сайте мерчанта, куда будет переведен клиент в случае успешной оплаты — настраивается в личном кабинете.
     ///
     /// Если параметр передан, используется его значение, если нет — значение из настроек терминала.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "SuccessURL")]
+    #[schema(value_type = String)]
     pub success_url: Option<Url>,
     /// URL на веб-сайте мерчанта, куда будет переведен клиент в случае неуспешной оплаты — настраивается в личном кабинете.
     ///
     /// Если параметр передан, используется его значение, если нет — значение из настроек терминала.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "FailURL")]
+    #[schema(value_type = String)]
     pub fail_url: Option<Url>,
     /// Cрок жизни ссылки или динамического QR-кода СБП, если выбран этот способ оплаты.
     ///
@@ -157,9 +162,10 @@ impl InitPaymentReq {
 }
 
 /// Ответ инициатора платежа
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
 #[serde(rename_all = "PascalCase")]
 pub struct InitPaymentRes {
+    #[schema(value_type = String)]
     pub terminal_key: TerminalKey,
     /// Requirements: <= 20 characters
     ///
@@ -181,6 +187,7 @@ pub struct InitPaymentRes {
     ///
     /// Ссылка на платежную форму. Параметр возвращается только для мерчантов, которые используют платежную форму Т-Банка.
     #[serde(rename = "PaymentURL")]
+    #[schema(value_type = String)]
     pub payment_url: Option<Url>,
 }
 
@@ -192,7 +199,7 @@ pub struct InitPaymentRes {
 ///
 /// Если ключи или значения содержат в себе специальные символы, получившееся значение должно быть закодировано функцией urlencode.
 /// ВНИМАНИЕ: SDK не имплементирует LongPay
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, ToSchema)]
 #[serde(rename_all = "PascalCase")]
 pub struct Data {
     additional_properties: String,
@@ -220,7 +227,7 @@ pub struct Data {
 /// O — одностадийная оплата;
 /// T — двухстадийная оплата.
 /// Если параметр передан, используется его значение, если нет — значение из настроек терминала.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, ToSchema)]
 pub enum PayType {
     O,
     T,
@@ -244,7 +251,7 @@ impl Display for PayType {
 /// ru — русский;
 /// en — английский.
 /// Если параметр не передан, форма откроется на русском языке.
-#[derive(Default, Serialize, Deserialize, Debug)]
+#[derive(Default, Serialize, Deserialize, Debug, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum Language {
     #[default]
@@ -262,7 +269,7 @@ impl Display for Language {
 }
 
 /// JSON-объект с данными маркетплейса. Параметр обязательный для маркетплейсов.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, ToSchema)]
 #[serde(rename_all = "PascalCase")]
 pub struct Shop {
     /// Код магазина. Для параметра ShopСode нужно использовать значение параметра Submerchant_ID, который возвращается в ответе при регистрации магазинов через XML. Если XML не используется, передавать поле не нужно.
@@ -315,7 +322,7 @@ impl Shop {
 /// D — MIT COF Delayed-Charge;
 /// N — MIT COF No-Show.
 /// Если передавать значения параметров, которые не соответствуют таблице, MAPI вернет ошибку 1126 — несопоставимые значения [rebillId] или [Recurrent] с переданным значением [OperationInitiatorType].
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, ToSchema)]
 pub struct OperationInitiatorType;
 
 #[cfg(test)]

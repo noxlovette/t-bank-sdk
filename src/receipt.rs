@@ -1,9 +1,10 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use strum::Display;
+use utoipa::ToSchema;
 
 /// JSON-объект с данными чека. Параметр обязательный, если подключена онлайн-касса.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, ToSchema)]
 #[serde(rename_all_fields = "PascalCase", untagged)]
 pub enum Receipt {
     FFD105 {
@@ -135,7 +136,7 @@ impl Receipt {
 }
 
 /// Позиция чека с информацией о товарах.
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, ToSchema)]
 #[serde(rename_all = "PascalCase")]
 pub struct ItemFFD105 {
     /// Тег ФФД: 1030
@@ -205,7 +206,7 @@ impl ItemFFD105 {
 }
 
 /// Позиция чека с информацией о товарах.
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, ToSchema)]
 #[serde(rename_all = "PascalCase")]
 pub struct ItemFFD12 {
     agent_data: AgentData,
@@ -337,7 +338,7 @@ impl ItemFFD12 {
 }
 
 /// Данные агента. Параметр обязательный, если используется агентская схема.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, ToSchema)]
 #[serde(rename_all = "PascalCase")]
 pub struct AgentData {
     agent_sign: AgentSign,
@@ -365,7 +366,7 @@ impl Default for AgentData {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, ToSchema)]
 #[serde(rename_all = "PascalCase")]
 pub struct SupplierInfo {
     phones: Vec<String>,
@@ -380,7 +381,7 @@ pub struct SupplierInfo {
 /// Включается в чек, если предметом расчета является товар, который подлежит обязательной маркировке сканером — соответствующий код в поле paymentObject.
 ///
 /// С 01.09.2025 для чеков с маркированными товарами обязательно передается часовая зона места расчета (тег 1011). По умолчанию — Москва. Для изменения напишите на acq_help@tbank.ru.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, ToSchema)]
 #[serde(rename_all = "PascalCase")]
 pub struct MarkCode {
     mark_code_type: MarkCodeType,
@@ -393,7 +394,7 @@ pub struct MarkCode {
 /// Пример:
 ///
 /// { "numenator": "1" "denominator" "2" }
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, ToSchema)]
 #[serde(rename_all = "PascalCase")]
 pub struct MarkQuantity {
     numerator: u32,
@@ -401,7 +402,7 @@ pub struct MarkQuantity {
 }
 
 /// Отраслевой реквизит предмета расчета.
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, ToSchema)]
 #[serde(rename_all = "PascalCase")]
 pub struct SectoralItemProps {
     /// Тег ФФД: 1262
@@ -427,7 +428,7 @@ pub struct SectoralItemProps {
 /// Если объект не передан, автоматически указывается итоговая сумма чека с видом оплаты «Безналичный».
 ///
 /// Если передан объект receipt.Payments, значение в Electronic должно быть равно итоговому значению Amount в методе Инициировать платеж. При этом сумма введенных значений по всем видам оплат, включая Electronic, должна быть равна сумме (Amount) всех товаров, которые были переданы в объекте receipt.Items.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, ToSchema)]
 #[serde(rename_all = "PascalCase")]
 pub struct Payments {
     electronic: u32,
@@ -482,7 +483,7 @@ impl Payments {
 /// - attorney — поверенный;
 /// - commission_agent — комиссионер;
 /// - another — другой тип агента.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, ToSchema)]
 enum AgentSign {
     BankPayingAgent,
     BankPayingSubagent,
@@ -506,7 +507,7 @@ enum AgentSign {
 /// - EGAIS20 — код товара в формате ЕГАИС-2.0;
 /// - EGAIS30 — код товара в формате ЕГАИС-3.0;
 /// - RAWCODE — код маркировки, как он был прочитан сканером.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, ToSchema)]
 #[serde(rename_all = "UPPERCASE")]
 enum MarkCodeType {
     Unknown,
@@ -522,7 +523,7 @@ enum MarkCodeType {
     Rawcode,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
 pub enum MeasurementUnit {
     #[serde(rename = "шт")]
     Piece,
@@ -594,7 +595,7 @@ pub enum MeasurementUnit {
 /// - credit_payment — оплата кредита.
 ///
 /// Если значение не передано, по умолчанию в онлайн-кассу отправляется признак предмета расчета full_payment.
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum PaymentMethod {
     FullPrepayment,
@@ -629,7 +630,7 @@ pub enum PaymentMethod {
 /// composite — составной предмет расчета;
 /// another — иной предмет расчета.
 /// Если значение не передано, по умолчанию в онлайн-кассу отправляется признак предмета расчета commodity.
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum PaymentObjectFF105 {
     #[default]
@@ -685,7 +686,7 @@ pub enum PaymentObjectFF105 {
 /// - goods_without_marking_code — ТНМ;
 /// - goods_with_marking_code — ТМ;
 /// - another — иной предмет расчета.
-#[derive(Serialize, Deserialize, Debug, Default, Display)]
+#[derive(Serialize, Deserialize, Debug, Default, Display, ToSchema)]
 #[serde(rename_all = "snake_case")]
 enum PaymentObjectFF12 {
     #[default]
@@ -740,7 +741,7 @@ enum PaymentObjectFF12 {
 /// - vat110 — НДС чека по расчетной ставке 10/110;
 /// - vat120 — НДС чека по расчетной ставке 20/120;
 /// - vat122 — НДС чека по расчетной ставке 22/122 (с 01.01.2026).
-#[derive(Serialize, Deserialize, Debug, Display, Default)]
+#[derive(Serialize, Deserialize, Debug, Display, Default, ToSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum Tax {
     #[default]
@@ -769,7 +770,7 @@ pub enum Tax {
 /// - usn_income_outcome — упрощенная СН (доходы минус расходы). Налоговая автоматически определит АУСН по ИНН и пробьет чеки с нужной СНО;
 /// - esn — единый сельскохозяйственный налог;
 /// - patent — патентная СН.
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Taxation {
     UsnIncome,
@@ -800,7 +801,7 @@ pub enum Taxation {
 /// - 37 — удостоверение беженца.
 /// - 38 — иные документы, признаваемые документами, удостоверяющими личность лиц без гражданства в соответствии с  законодательством Российской Федерации и международным договором Российской Федерации.
 /// - 40 — документ, удостоверяющий личность лица, не имеющего действительного документа, удостоверяющего личность, на период рассмотрения заявления о признании гражданином Российской Федерации или о приеме в гражданство Российской  Федерации.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, ToSchema)]
 enum DocumentCode {
     #[serde(rename = "21")]
     C21,
@@ -837,7 +838,7 @@ enum DocumentCode {
 /// Default: 1.05
 ///
 /// Версия ФФД.
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, ToSchema)]
 pub enum FfdVersion {
     #[serde(rename = "1.2")]
     V12,
@@ -847,7 +848,7 @@ pub enum FfdVersion {
 }
 
 /// Информация по клиенту.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, ToSchema)]
 pub struct ClientInfo {
     birthdate: String,
     citizenship: String,
@@ -856,14 +857,14 @@ pub struct ClientInfo {
     address: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, ToSchema)]
 pub struct OperatingCheckProps;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, ToSchema)]
 pub struct SectoralCheckProps;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, ToSchema)]
 pub struct AddUserProp;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, ToSchema)]
 pub struct AdditionalCheckProps;
