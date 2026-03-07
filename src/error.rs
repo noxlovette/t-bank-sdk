@@ -43,3 +43,20 @@ pub struct ErrorWrapper<T> {
     /// Успешность прохождения запроса — true/false.
     success: bool,
 }
+
+impl<T> ErrorWrapper<T> {
+    pub fn unwrap(self) -> Result<T, Error> {
+        let Self {
+            inner,
+            message,
+            error_code,
+            ..
+        } = self;
+
+        if error_code.0 == "0" {
+            Ok(inner.unwrap_or_else(|| unreachable!()))
+        } else {
+            Err(Error::Api(message.unwrap_or(error_code.0)))
+        }
+    }
+}

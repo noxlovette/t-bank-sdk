@@ -117,7 +117,7 @@ impl From<&Password> for String {
 }
 
 impl Client {
-    /// Создать клиента для указанного окружения.  
+    /// Создать клиента для указанного окружения.
     pub async fn new() -> Result<Self, Error> {
         let version = env!("CARGO_PKG_VERSION");
 
@@ -218,6 +218,7 @@ impl Client {
         let req = TokenWrapper::from_payload(payload, password);
 
         println!("{:?}", req);
+
         let res = self
             .client
             .post(self.url("Init"))
@@ -226,6 +227,7 @@ impl Client {
             .await?
             .json()
             .await?;
+
         println!("{:?}", res);
 
         Ok(res)
@@ -233,7 +235,8 @@ impl Client {
 
     pub async fn initiate_payment(&self, payload: InitPaymentReq) -> HandlerResult<InitPaymentRes> {
         let credentials = self.credentials_required()?;
-        self.initiate_payment_inner(payload, &credentials.password).await
+        self.initiate_payment_inner(payload, &credentials.password)
+            .await
     }
 
     pub async fn initiate_payment_with_credentials(

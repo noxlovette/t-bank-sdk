@@ -161,6 +161,17 @@ impl InitPaymentReq {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum PaymentStatus {
+    #[default]
+    Pending,
+    InProgress,
+    Cancelled,
+    Failed,
+    Succeded,
+}
+
 /// Ответ инициатора платежа
 #[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
 #[serde(rename_all = "PascalCase")]
