@@ -182,12 +182,14 @@ pub struct PaymentNotificationRes {
     #[schema(value_type = String)]
     pub terminal_key: TerminalKey,
     pub status: PaymentStatus,
+    pub amount: u32,
     pub order_id: String,
-    pub payment_id: String,
+    pub payment_id: u64,
     pub rebill_id: u32,
     pub card_id: u32,
     pub pan: String,
     pub exp_date: String,
+    pub token: String,
     pub data: DataNotification,
 }
 
@@ -365,7 +367,10 @@ pub struct OperationInitiatorType;
 
 #[cfg(test)]
 mod test {
-    use crate::{InitPaymentReq, ItemFFD105, Receipt, Shop, Tax, Taxation, TerminalKey};
+    use crate::{
+        ErrorWrapper, InitPaymentReq, ItemFFD105, PaymentNotificationRes, PaymentStatus, Receipt,
+        Shop, Tax, Taxation, TerminalKey,
+    };
     use serde_json::json;
 
     #[test]
@@ -431,5 +436,40 @@ mod test {
     fn parse_response() {
         let json = r#"{"Success":true,"ErrorCode":"0","TerminalKey":"TBankTest","Status":"NEW","PaymentId":"3093639567","OrderId":"21090","Amount":140000,"PaymentURL":"https://pay.tbank.ru/new/fU1ppgqa"}"#;
         let _ = json;
+    }
+
+    #[test]
+    fn payment_notification_deserializes_into_error_wrapper() {
+        let json = r#"
+        {
+          "TerminalKey": "TBankTest",
+          "Amount": 1000,
+          "OrderId": "yLRDLX4nGyyiQQEdq5kB3",
+          "Success": true,
+          "Status": "CONFIRMED",
+          "PaymentId": 8104656673,
+          "ErrorCode": "0",
+          "Message": "string",
+          "Details": "string",
+          "RebillId": 3207469334,
+          "CardId": 10452089,
+          "Pan": "string",
+          "ExpDate": "0229",
+          "Token": "7241ac8307f349afb7bb9dda760717721bbb45950b97c67289f23d8c69cc7b96",
+          "Data": {
+            "Route": "TCB",
+            "Source": "Installment",
+            "CreditAmount": 10000
+          }
+        }
+        "#;
+
+        let wrapper: ErrorWrapper<PaymentNotificationRes> = serde_json::from_str(json).unwrap();
+        let response = wrapper.unwrap().unwrap();
+
+        assert!(matches!(response.status, PaymentStatus::Confirmed));
+        assert_eq!(response.order_id, "yLRDLX4nGyyiQQEdq5kB3");
+        assert_eq!(response.payment_id, 8104656673);
+        assert_eq!(response.data.credit_amount, 10000);
     }
 }
