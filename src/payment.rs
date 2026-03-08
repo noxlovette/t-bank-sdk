@@ -166,6 +166,7 @@ impl InitPaymentReq {
 pub enum PaymentStatus {
     #[default]
     New,
+    Authorized,
     Confirmed,
     PartialReversed,
     Reversed,
@@ -184,13 +185,13 @@ pub struct PaymentNotificationRes {
     pub status: PaymentStatus,
     pub amount: u32,
     pub order_id: String,
-    pub payment_id: String,
-    pub rebill_id: u32,
-    pub card_id: u32,
-    pub pan: String,
-    pub exp_date: String,
-    pub token: String,
-    pub data: DataNotification,
+    pub payment_id: u64,
+    pub rebill_id: Option<u64>,
+    pub card_id: Option<u64>,
+    pub pan: Option<String>,
+    pub exp_date: Option<String>,
+    pub token: Option<String>,
+    pub data: Option<DataNotification>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
@@ -447,7 +448,7 @@ mod test {
           "OrderId": "yLRDLX4nGyyiQQEdq5kB3",
           "Success": true,
           "Status": "CONFIRMED",
-          "PaymentId": "8104656673",
+          "PaymentId": 8104656673,
           "ErrorCode": "0",
           "Message": "string",
           "Details": "string",
@@ -469,7 +470,23 @@ mod test {
 
         assert!(matches!(response.status, PaymentStatus::Confirmed));
         assert_eq!(response.order_id, "yLRDLX4nGyyiQQEdq5kB3");
-        assert_eq!(response.payment_id, "8104656673");
-        assert_eq!(response.data.credit_amount, 10000);
+        assert_eq!(response.payment_id, 8104656673);
+        assert_eq!(response.data.unwrap().credit_amount, 10000);
+    }
+
+    #[test]
+    fn payment_notification_deserializes_real_webhook_payload() {
+        let json = r#"{"TerminalKey":"1772186527637DEMO","OrderId":"lde1q7xbsoisn1vjj2k6s","Success":true,"Status":"AUTHORIZED","PaymentId":8111987112,"ErrorCode":"0","Amount":1000,"CardId":659561464,"Pan":"430000******0777","ExpDate":"1230","Token":"17bf87f32797d961db48f4500cc9110be5cc2f480e4e555e2440eec09108a760"}"#;
+
+        let wrapper: ErrorWrapper<PaymentNotificationRes> = serde_json::from_str(json).unwrap();
+        let response = wrapper.unwrap().unwrap();
+
+        assert_eq!(response.order_id, "lde1q7xbsoisn1vjj2k6s");
+        assert_eq!(response.amount, 1000);
+        assert_eq!(response.payment_id, 8111987112);
+        assert_eq!(response.rebill_id, None);
+        assert_eq!(response.card_id, Some(659561464));
+        assert_eq!(response.exp_date.as_deref(), Some("1230"));
+        assert!(response.data.is_none());
     }
 }
