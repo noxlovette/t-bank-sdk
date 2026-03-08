@@ -165,11 +165,38 @@ impl InitPaymentReq {
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum PaymentStatus {
     #[default]
-    Pending,
-    InProgress,
-    Cancelled,
-    Failed,
-    Succeded,
+    New,
+    Confirmed,
+    PartialReversed,
+    Reversed,
+    Canceled,
+    PartialRefunded,
+    Refunded,
+    Rejected,
+    DeadlineExpired,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
+#[serde(rename_all = "PascalCase")]
+pub struct PaymentNotificationRes {
+    #[schema(value_type = String)]
+    pub terminal_key: TerminalKey,
+    pub status: PaymentStatus,
+    pub order_id: String,
+    pub payment_id: String,
+    pub rebill_id: u32,
+    pub card_id: u32,
+    pub pan: String,
+    pub exp_date: String,
+    pub data: DataNotification,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
+#[serde(rename_all = "PascalCase")]
+pub struct DataNotification {
+    pub route: String,
+    pub source: String,
+    pub credit_amount: u32,
 }
 
 /// Ответ инициатора платежа
@@ -181,7 +208,7 @@ pub struct InitPaymentRes {
     /// Requirements: <= 20 characters
     ///
     /// Статус транзакции.
-    pub status: String,
+    pub status: PaymentStatus,
     /// Requirements: <= 20 chars
     ///
     /// Сумма в копейках.
