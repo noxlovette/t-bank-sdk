@@ -184,7 +184,7 @@ pub struct PaymentNotificationRes {
     pub status: PaymentStatus,
     pub amount: u32,
     pub order_id: String,
-    pub payment_id: u64,
+    pub payment_id: String,
     pub rebill_id: u32,
     pub card_id: u32,
     pub pan: String,
@@ -447,7 +447,7 @@ mod test {
           "OrderId": "yLRDLX4nGyyiQQEdq5kB3",
           "Success": true,
           "Status": "CONFIRMED",
-          "PaymentId": 8104656673,
+          "PaymentId": "8104656673",
           "ErrorCode": "0",
           "Message": "string",
           "Details": "string",
@@ -469,7 +469,7 @@ mod test {
 
         assert!(matches!(response.status, PaymentStatus::Confirmed));
         assert_eq!(response.order_id, "yLRDLX4nGyyiQQEdq5kB3");
-        assert_eq!(response.payment_id, 8104656673);
+        assert_eq!(response.payment_id, "8104656673");
         assert_eq!(response.data.credit_amount, 10000);
     }
 }
