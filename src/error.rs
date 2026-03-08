@@ -54,7 +54,7 @@ impl<T> ErrorWrapper<T> {
         } = self;
 
         if error_code.0 == "0" {
-            Ok(inner.unwrap_or_else(|| unreachable!()))
+            inner.ok_or_else(|| Error::Api("error code 0 but got no body".to_string()))
         } else {
             Err(Error::Api(message.unwrap_or(error_code.0)))
         }
