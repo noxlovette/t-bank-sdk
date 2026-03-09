@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use strum::Display;
+use strum::{Display, EnumString};
 use utoipa::ToSchema;
 
 /// JSON-объект с данными чека. Параметр обязательный, если подключена онлайн-касса.
@@ -483,7 +483,9 @@ impl Payments {
 /// - attorney — поверенный;
 /// - commission_agent — комиссионер;
 /// - another — другой тип агента.
-#[derive(Serialize, Deserialize, Debug, ToSchema)]
+#[derive(Serialize, Deserialize, Debug, ToSchema, EnumString)]
+#[strum(serialize_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 enum AgentSign {
     BankPayingAgent,
     BankPayingSubagent,
@@ -507,8 +509,9 @@ enum AgentSign {
 /// - EGAIS20 — код товара в формате ЕГАИС-2.0;
 /// - EGAIS30 — код товара в формате ЕГАИС-3.0;
 /// - RAWCODE — код маркировки, как он был прочитан сканером.
-#[derive(Serialize, Deserialize, Debug, ToSchema)]
+#[derive(Serialize, Deserialize, Debug, ToSchema, EnumString)]
 #[serde(rename_all = "UPPERCASE")]
+#[strum(serialize_all = "UPPERCASE")]
 enum MarkCodeType {
     Unknown,
     Ean8,
@@ -523,7 +526,8 @@ enum MarkCodeType {
     Rawcode,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Default, ToSchema, EnumString)]
+#[strum(serialize_all = "snake_case")]
 pub enum MeasurementUnit {
     #[serde(rename = "шт")]
     Piece,
@@ -595,8 +599,9 @@ pub enum MeasurementUnit {
 /// - credit_payment — оплата кредита.
 ///
 /// Если значение не передано, по умолчанию в онлайн-кассу отправляется признак предмета расчета full_payment.
-#[derive(Serialize, Deserialize, Debug, Default, ToSchema)]
+#[derive(Serialize, Deserialize, Debug, Default, ToSchema, EnumString)]
 #[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
 pub enum PaymentMethod {
     FullPrepayment,
     Prepayment,
@@ -630,8 +635,9 @@ pub enum PaymentMethod {
 /// composite — составной предмет расчета;
 /// another — иной предмет расчета.
 /// Если значение не передано, по умолчанию в онлайн-кассу отправляется признак предмета расчета commodity.
-#[derive(Serialize, Deserialize, Debug, Default, ToSchema)]
+#[derive(Serialize, Deserialize, Debug, Default, ToSchema, EnumString)]
 #[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
 pub enum PaymentObjectFF105 {
     #[default]
     Commodity,
@@ -686,8 +692,9 @@ pub enum PaymentObjectFF105 {
 /// - goods_without_marking_code — ТНМ;
 /// - goods_with_marking_code — ТМ;
 /// - another — иной предмет расчета.
-#[derive(Serialize, Deserialize, Debug, Default, Display, ToSchema)]
+#[derive(Serialize, Deserialize, Debug, Default, Display, ToSchema, EnumString)]
 #[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
 enum PaymentObjectFF12 {
     #[default]
     Commodity,
@@ -741,8 +748,9 @@ enum PaymentObjectFF12 {
 /// - vat110 — НДС чека по расчетной ставке 10/110;
 /// - vat120 — НДС чека по расчетной ставке 20/120;
 /// - vat122 — НДС чека по расчетной ставке 22/122 (с 01.01.2026).
-#[derive(Serialize, Deserialize, Debug, Display, Default, ToSchema)]
+#[derive(Serialize, Deserialize, Debug, Display, Default, ToSchema, EnumString)]
 #[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
 pub enum Tax {
     #[default]
     None,
@@ -770,8 +778,9 @@ pub enum Tax {
 /// - usn_income_outcome — упрощенная СН (доходы минус расходы). Налоговая автоматически определит АУСН по ИНН и пробьет чеки с нужной СНО;
 /// - esn — единый сельскохозяйственный налог;
 /// - patent — патентная СН.
-#[derive(Serialize, Deserialize, Debug, Default, ToSchema)]
+#[derive(Serialize, Deserialize, Debug, Default, ToSchema, EnumString)]
 #[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
 pub enum Taxation {
     UsnIncome,
     #[default]
@@ -801,35 +810,49 @@ pub enum Taxation {
 /// - 37 — удостоверение беженца.
 /// - 38 — иные документы, признаваемые документами, удостоверяющими личность лиц без гражданства в соответствии с  законодательством Российской Федерации и международным договором Российской Федерации.
 /// - 40 — документ, удостоверяющий личность лица, не имеющего действительного документа, удостоверяющего личность, на период рассмотрения заявления о признании гражданином Российской Федерации или о приеме в гражданство Российской  Федерации.
-#[derive(Serialize, Deserialize, Debug, ToSchema)]
+#[derive(Serialize, Deserialize, Debug, ToSchema, EnumString)]
 enum DocumentCode {
     #[serde(rename = "21")]
+    #[strum(serialize = "21")]
     C21,
     #[serde(rename = "22")]
+    #[strum(serialize = "22")]
     C22,
     #[serde(rename = "26")]
+    #[strum(serialize = "26")]
     C26,
     #[serde(rename = "27")]
+    #[strum(serialize = "27")]
     C27,
     #[serde(rename = "28")]
+    #[strum(serialize = "28")]
     C28,
     #[serde(rename = "31")]
+    #[strum(serialize = "31")]
     C31,
     #[serde(rename = "32")]
+    #[strum(serialize = "32")]
     C32,
     #[serde(rename = "33")]
+    #[strum(serialize = "33")]
     C33,
     #[serde(rename = "34")]
+    #[strum(serialize = "34")]
     C34,
     #[serde(rename = "35")]
+    #[strum(serialize = "35")]
     C35,
     #[serde(rename = "36")]
+    #[strum(serialize = "36")]
     C36,
     #[serde(rename = "37")]
+    #[strum(serialize = "37")]
     C37,
     #[serde(rename = "38")]
+    #[strum(serialize = "38")]
     C38,
     #[serde(rename = "40")]
+    #[strum(serialize = "40")]
     C40,
 }
 
@@ -838,12 +861,14 @@ enum DocumentCode {
 /// Default: 1.05
 ///
 /// Версия ФФД.
-#[derive(Serialize, Deserialize, Debug, Default, ToSchema)]
+#[derive(Serialize, Deserialize, Debug, Default, ToSchema, EnumString)]
 pub enum FfdVersion {
     #[serde(rename = "1.2")]
+    #[strum(serialize = "1.2")]
     V12,
     #[default]
     #[serde(rename = "1.05")]
+    #[strum(serialize = "1.05")]
     V105,
 }
 

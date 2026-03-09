@@ -2,6 +2,7 @@ use crate::{Receipt, TerminalKey};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use std::fmt::{self, Display};
+use strum::EnumString;
 use url::Url;
 use utoipa::ToSchema;
 
@@ -161,8 +162,9 @@ impl InitPaymentReq {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, Default, ToSchema, EnumString)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum PaymentStatus {
     #[default]
     New,
@@ -268,7 +270,9 @@ pub struct Data {
 /// O — одностадийная оплата;
 /// T — двухстадийная оплата.
 /// Если параметр передан, используется его значение, если нет — значение из настроек терминала.
-#[derive(Serialize, Deserialize, Debug, ToSchema)]
+#[derive(Serialize, Deserialize, Debug, ToSchema, EnumString)]
+#[serde(rename_all = "UPPERCASE")]
+#[strum(serialize_all = "UPPERCASE")]
 pub enum PayType {
     O,
     T,
@@ -292,8 +296,9 @@ impl Display for PayType {
 /// ru — русский;
 /// en — английский.
 /// Если параметр не передан, форма откроется на русском языке.
-#[derive(Default, Serialize, Deserialize, Debug, ToSchema)]
+#[derive(Default, Serialize, Deserialize, Debug, ToSchema, EnumString)]
 #[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
 pub enum Language {
     #[default]
     Ru,
