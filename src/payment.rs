@@ -1,8 +1,7 @@
 use crate::{Receipt, TerminalKey};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
-use std::fmt::{self, Display};
-use strum::EnumString;
+use strum::{AsRefStr, Display};
 use url::Url;
 use utoipa::ToSchema;
 
@@ -162,7 +161,7 @@ impl InitPaymentReq {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, ToSchema, EnumString)]
+#[derive(Debug, Serialize, Deserialize, Default, ToSchema, Display, AsRefStr)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 #[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum PaymentStatus {
@@ -270,21 +269,12 @@ pub struct Data {
 /// O — одностадийная оплата;
 /// T — двухстадийная оплата.
 /// Если параметр передан, используется его значение, если нет — значение из настроек терминала.
-#[derive(Serialize, Deserialize, Debug, ToSchema, EnumString)]
+#[derive(Serialize, Deserialize, Debug, ToSchema, Display, AsRefStr)]
 #[serde(rename_all = "UPPERCASE")]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum PayType {
     O,
     T,
-}
-
-impl Display for PayType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::O => write!(f, "o"),
-            Self::T => write!(f, "t"),
-        }
-    }
 }
 
 /// Requirements: <= 2 characters
@@ -296,22 +286,13 @@ impl Display for PayType {
 /// ru — русский;
 /// en — английский.
 /// Если параметр не передан, форма откроется на русском языке.
-#[derive(Default, Serialize, Deserialize, Debug, ToSchema, EnumString)]
+#[derive(Default, Serialize, Deserialize, Debug, ToSchema, Display, AsRefStr)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum Language {
     #[default]
     Ru,
     En,
-}
-
-impl Display for Language {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::Ru => write!(f, "ru"),
-            Self::En => write!(f, "en"),
-        }
-    }
 }
 
 /// JSON-объект с данными маркетплейса. Параметр обязательный для маркетплейсов.
