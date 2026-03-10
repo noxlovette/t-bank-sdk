@@ -692,7 +692,7 @@ pub enum PaymentObjectFF105 {
 /// - goods_without_marking_code — ТНМ;
 /// - goods_with_marking_code — ТМ;
 /// - another — иной предмет расчета.
-#[derive(Serialize, Deserialize, Debug, Default, Display, ToSchema)]
+#[derive(Serialize, Deserialize, Debug, Default, Display, EnumString, ToSchema)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 enum PaymentObjectFF12 {
@@ -748,7 +748,7 @@ enum PaymentObjectFF12 {
 /// - vat110 — НДС чека по расчетной ставке 10/110;
 /// - vat120 — НДС чека по расчетной ставке 20/120;
 /// - vat122 — НДС чека по расчетной ставке 22/122 (с 01.01.2026).
-#[derive(Serialize, Deserialize, Debug, Display, Default, ToSchema)]
+#[derive(Serialize, Deserialize, Debug, Display, EnumString, Default, ToSchema)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum Tax {
