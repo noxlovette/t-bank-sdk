@@ -1,4 +1,4 @@
-use crate::{Receipt, TerminalKey};
+use crate::{Receipt, TerminalKey, impl_string_conversions_default};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use strum::{AsRefStr, Display, EnumString};
@@ -178,6 +178,8 @@ pub enum PaymentStatus {
     DeadlineExpired,
 }
 
+impl_string_conversions_default!(PaymentStatus);
+
 #[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
 #[serde(rename_all = "PascalCase")]
 pub struct PaymentNotificationRes {
@@ -269,13 +271,16 @@ pub struct Data {
 /// O — одностадийная оплата;
 /// T — двухстадийная оплата.
 /// Если параметр передан, используется его значение, если нет — значение из настроек терминала.
-#[derive(Serialize, Deserialize, Debug, ToSchema, Display, AsRefStr, EnumString)]
+#[derive(Serialize, Default, Deserialize, Debug, ToSchema, Display, AsRefStr, EnumString)]
 #[serde(rename_all = "UPPERCASE")]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum PayType {
+    #[default]
     O,
     T,
 }
+
+impl_string_conversions_default!(PayType);
 
 /// Requirements: <= 2 characters
 ///
@@ -294,6 +299,8 @@ pub enum Language {
     Ru,
     En,
 }
+
+impl_string_conversions_default!(Language);
 
 /// JSON-объект с данными маркетплейса. Параметр обязательный для маркетплейсов.
 #[derive(Serialize, Deserialize, Debug, ToSchema)]

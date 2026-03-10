@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use strum::{AsRefStr, Display, EnumString};
 use utoipa::ToSchema;
 
+use crate::impl_string_conversions_default;
+
 /// JSON-объект с данными чека. Параметр обязательный, если подключена онлайн-касса.
 #[derive(Serialize, Deserialize, Debug, ToSchema)]
 #[serde(rename_all_fields = "PascalCase", untagged)]
@@ -483,18 +485,21 @@ impl Payments {
 /// - attorney — поверенный;
 /// - commission_agent — комиссионер;
 /// - another — другой тип агента.
-#[derive(Serialize, Deserialize, Debug, ToSchema, Display, AsRefStr, EnumString)]
+#[derive(Serialize, Default, Deserialize, Debug, ToSchema, Display, AsRefStr, EnumString)]
 #[strum(serialize_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
 enum AgentSign {
     BankPayingAgent,
     BankPayingSubagent,
+    #[default]
     PayingAgent,
     PayingSubagent,
     Attorney,
     CommisionAgent,
     Another,
 }
+
+impl_string_conversions_default!(AgentSign);
 
 /// Тип штрихкода:
 ///
@@ -509,10 +514,11 @@ enum AgentSign {
 /// - EGAIS20 — код товара в формате ЕГАИС-2.0;
 /// - EGAIS30 — код товара в формате ЕГАИС-3.0;
 /// - RAWCODE — код маркировки, как он был прочитан сканером.
-#[derive(Serialize, Deserialize, Debug, ToSchema, Display, AsRefStr, EnumString)]
+#[derive(Serialize, Default, Deserialize, Debug, ToSchema, Display, AsRefStr, EnumString)]
 #[serde(rename_all = "UPPERCASE")]
 #[strum(serialize_all = "UPPERCASE")]
 enum MarkCodeType {
+    #[default]
     Unknown,
     Ean8,
     Ean13,
@@ -525,6 +531,8 @@ enum MarkCodeType {
     Egais30,
     Rawcode,
 }
+
+impl_string_conversions_default!(MarkCodeType);
 
 #[derive(Debug, Serialize, Deserialize, Default, ToSchema, Display, AsRefStr, EnumString)]
 #[strum(serialize_all = "snake_case")]
@@ -582,6 +590,8 @@ pub enum MeasurementUnit {
     Other,
 }
 
+impl_string_conversions_default!(MeasurementUnit);
+
 /// Requirements: [full_prepayment, prepayment, advance, full_payment, partial_payment, credit, credit_payment]
 ///
 /// Default: full_payment
@@ -612,6 +622,8 @@ pub enum PaymentMethod {
     Credit,
     CreditPayment,
 }
+
+impl_string_conversions_default!(PaymentMethod);
 
 /// Requirements: [commodity, excise, job, service, gambling_bet, gambling_prize, lottery, lottery_prize, intellectual_activity, payment, agent_commission, composite, another]
 ///
@@ -654,6 +666,8 @@ pub enum PaymentObjectFF105 {
     Composite,
     Another,
 }
+
+impl_string_conversions_default!(PaymentObjectFF105);
 
 /// Requirements: [commodity, excise, job, service, gambling_bet, gambling_prize, lottery, lottery_prize, intellectual_activity, payment, agent_commission, contribution, property_rights, unrealization, tax_reduction, trade_fee, resort_tax, pledge, income_decrease, ie_pension_insurance_without_payments, ie_pension_insurance_with_payments, ie_medical_insurance_without_payments, ie_medical_insurance_with_payments, social_insurance, casino_chips, agent_payment, excisable_goods_without_marking_code, excisable_goods_with_marking_code, goods_without_marking_code, goods_with_marking_code, another]
 ///
@@ -730,6 +744,8 @@ enum PaymentObjectFF12 {
     Another,
 }
 
+impl_string_conversions_default!(PaymentObjectFF12);
+
 /// Requirements: [none, vat0, vat5, vat7, vat10, vat20, vat22, vat105, vat107, vat110, vat120, vat122]
 ///
 /// Тег ФФД: 1199
@@ -767,6 +783,8 @@ pub enum Tax {
     Vat122,
 }
 
+impl_string_conversions_default!(Tax);
+
 /// Requirements: [osn, usn_income, usn_income_outcome, esn, patent]
 ///
 /// Тег ФФД: 1055.
@@ -790,6 +808,8 @@ pub enum Taxation {
     Patent,
 }
 
+impl_string_conversions_default!(Taxation);
+
 /// Тег ФФД: 1245
 ///
 /// Числовой код вида документа, удостоверяющего личность.
@@ -810,8 +830,9 @@ pub enum Taxation {
 /// - 37 — удостоверение беженца.
 /// - 38 — иные документы, признаваемые документами, удостоверяющими личность лиц без гражданства в соответствии с  законодательством Российской Федерации и международным договором Российской Федерации.
 /// - 40 — документ, удостоверяющий личность лица, не имеющего действительного документа, удостоверяющего личность, на период рассмотрения заявления о признании гражданином Российской Федерации или о приеме в гражданство Российской  Федерации.
-#[derive(Serialize, Deserialize, Debug, ToSchema, Display, AsRefStr, EnumString)]
+#[derive(Serialize, Default, Deserialize, Debug, ToSchema, Display, AsRefStr, EnumString)]
 enum DocumentCode {
+    #[default]
     #[serde(rename = "21")]
     #[strum(serialize = "21")]
     C21,
@@ -856,6 +877,8 @@ enum DocumentCode {
     C40,
 }
 
+impl_string_conversions_default!(DocumentCode);
+
 /// Requirements: [1.2, 1.05]
 ///
 /// Default: 1.05
@@ -871,6 +894,8 @@ pub enum FfdVersion {
     #[strum(serialize = "1.05")]
     V105,
 }
+
+impl_string_conversions_default!(FfdVersion);
 
 /// Информация по клиенту.
 #[derive(Serialize, Deserialize, Debug, ToSchema)]

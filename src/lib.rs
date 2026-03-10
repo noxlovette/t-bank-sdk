@@ -1,5 +1,6 @@
 mod client;
 mod error;
+mod macros;
 mod payment;
 mod receipt;
 mod token;
