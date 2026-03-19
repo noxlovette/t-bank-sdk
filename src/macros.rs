@@ -7,8 +7,8 @@ macro_rules! impl_string_conversions_default {
             }
         }
 
-        impl From<Option<String>> for $type {
-            fn from(value: Option<String>) -> Self {
+        impl From<::std::option::Option<String>> for $type {
+            fn from(value: ::std::option::Option<String>) -> Self {
                 value.map(Into::into).unwrap_or_default()
             }
         }
