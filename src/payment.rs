@@ -139,9 +139,10 @@ impl InitPaymentReq {
     }
 
     pub fn redirect_due_date(mut self, rdd: DateTime<Utc>) -> Self {
-        let valid = |d| d > Duration::minutes(1) && d > Duration::days(90);
-
-        self.redirect_due_date = valid(rdd - Utc::now()).then_some(rdd);
+        let delta = rdd - Utc::now();
+        // Must be between 1 minute and 90 days from now.
+        let valid = delta > Duration::minutes(1) && delta < Duration::days(90);
+        self.redirect_due_date = valid.then_some(rdd);
         self
     }
 
