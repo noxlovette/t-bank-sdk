@@ -31,16 +31,19 @@ impl AddCustomerReq {
         }
     }
 
+    /// Установить электронную почту покупателя.
     pub fn email(mut self, email: impl Into<String>) -> Self {
         self.email = Some(email.into());
         self
     }
 
+    /// Установить номер телефона покупателя.
     pub fn phone(mut self, phone: impl Into<String>) -> Self {
         self.phone = Some(phone.into());
         self
     }
 
+    /// Установить IP-адрес покупателя.
     pub fn ip(mut self, ip: impl Into<String>) -> Self {
         self.ip = Some(ip.into());
         self
@@ -77,6 +80,7 @@ impl GetCustomerReq {
         }
     }
 
+    /// Установить IP-адрес запроса.
     pub fn ip(mut self, ip: impl Into<String>) -> Self {
         self.ip = Some(ip.into());
         self
@@ -115,6 +119,7 @@ impl RemoveCustomerReq {
         }
     }
 
+    /// Установить IP-адрес запроса.
     pub fn ip(mut self, ip: impl Into<String>) -> Self {
         self.ip = Some(ip.into());
         self
@@ -214,16 +219,19 @@ impl AddCardReq {
         }
     }
 
+    /// Установить тип проверки карты при привязке.
     pub fn check_type(mut self, check_type: CheckType) -> Self {
         self.check_type = Some(check_type);
         self
     }
 
+    /// Установить IP-адрес запроса.
     pub fn ip(mut self, ip: impl Into<String>) -> Self {
         self.ip = Some(ip.into());
         self
     }
 
+    /// Установить признак резидентства карты.
     pub fn resident_state(mut self, resident: bool) -> Self {
         self.resident_state = Some(resident);
         self
@@ -269,11 +277,13 @@ impl GetCardListReq {
         }
     }
 
+    /// Фильтровать карты по признаку сохранения для оплаты в один клик.
     pub fn saved_card(mut self, saved: bool) -> Self {
         self.saved_card = Some(saved);
         self
     }
 
+    /// Установить IP-адрес запроса.
     pub fn ip(mut self, ip: impl Into<String>) -> Self {
         self.ip = Some(ip.into());
         self
@@ -309,6 +319,7 @@ impl RemoveCardReq {
         }
     }
 
+    /// Установить IP-адрес запроса.
     pub fn ip(mut self, ip: impl Into<String>) -> Self {
         self.ip = Some(ip.into());
         self

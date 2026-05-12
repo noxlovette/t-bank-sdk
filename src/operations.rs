@@ -34,21 +34,25 @@ impl ConfirmPaymentReq {
         }
     }
 
+    /// Установить сумму подтверждения в копейках.
     pub fn amount(mut self, amount: u32) -> Self {
         self.amount = Some(amount);
         self
     }
 
+    /// Установить IP-адрес запроса.
     pub fn ip(mut self, ip: impl Into<String>) -> Self {
         self.ip = Some(ip.into());
         self
     }
 
+    /// Установить данные чека.
     pub fn receipt(mut self, receipt: Receipt) -> Self {
         self.receipt = Some(receipt);
         self
     }
 
+    /// Установить список магазинов (для маркетплейсов).
     pub fn shops(mut self, shops: Vec<Shop>) -> Self {
         self.shops = shops;
         self
@@ -101,26 +105,31 @@ impl CancelPaymentReq {
         }
     }
 
+    /// Установить сумму возврата в копейках.
     pub fn amount(mut self, amount: u32) -> Self {
         self.amount = Some(amount);
         self
     }
 
+    /// Установить IP-адрес запроса.
     pub fn ip(mut self, ip: impl Into<String>) -> Self {
         self.ip = Some(ip.into());
         self
     }
 
+    /// Установить данные чека.
     pub fn receipt(mut self, receipt: Receipt) -> Self {
         self.receipt = Some(receipt);
         self
     }
 
+    /// Установить список магазинов (для маркетплейсов).
     pub fn shops(mut self, shops: Vec<Shop>) -> Self {
         self.shops = shops;
         self
     }
 
+    /// Установить идентификатор операции мерчанта.
     pub fn external_request_id(mut self, id: impl Into<String>) -> Self {
         self.external_request_id = Some(id.into());
         self
@@ -181,11 +190,13 @@ impl ChargePaymentReq {
         }
     }
 
+    /// Установить IP-адрес запроса.
     pub fn ip(mut self, ip: impl Into<String>) -> Self {
         self.ip = Some(ip.into());
         self
     }
 
+    /// Установить email для отправки уведомления покупателю.
     pub fn send_email(mut self, email: impl Into<String>) -> Self {
         self.send_email = Some(true);
         self.info_email = Some(email.into());
@@ -226,6 +237,7 @@ impl GetStateReq {
         }
     }
 
+    /// Установить IP-адрес запроса.
     pub fn ip(mut self, ip: impl Into<String>) -> Self {
         self.ip = Some(ip.into());
         self

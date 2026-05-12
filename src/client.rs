@@ -2,9 +2,9 @@ use crate::{
     AddCardReq, AddCardRes, AddCustomerReq, AddCustomerRes, CancelPaymentReq, CancelPaymentRes,
     CardInfo, ChargePaymentReq, ChargePaymentRes, ConfirmPaymentReq, ConfirmPaymentRes,
     DeriveToken, Error, GetCardListReq, GetCustomerReq, GetCustomerRes, GetStateReq, GetStateRes,
-    HandlerResult, InitPaymentReq, InitPaymentRes, RemoveCardReq, RemoveCardRes,
-    RemoveCustomerReq, RemoveCustomerRes, ResendNotificationReq, ResendNotificationRes,
-    SendClosingReceiptReq, SendClosingReceiptRes, TokenWrapper,
+    HandlerResult, InitPaymentReq, InitPaymentRes, RemoveCardReq, RemoveCardRes, RemoveCustomerReq,
+    RemoveCustomerRes, ResendNotificationReq, ResendNotificationRes, SendClosingReceiptReq,
+    SendClosingReceiptRes, TokenWrapper,
 };
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -182,6 +182,7 @@ impl Client {
         })
     }
 
+    /// Получить пароль терминала.
     pub fn password(&self) -> &Password {
         &self
             .credentials
@@ -190,6 +191,7 @@ impl Client {
             .password
     }
 
+    /// Получить идентификатор терминала.
     pub fn terminal_key(&self) -> &TerminalKey {
         &self
             .credentials
@@ -198,6 +200,7 @@ impl Client {
             .terminal_key
     }
 
+    /// Проверить, настроены ли учетные данные в клиенте.
     pub fn has_stored_credentials(&self) -> bool {
         self.credentials.is_some()
     }
@@ -218,7 +221,12 @@ impl Client {
     }
 
     /// Generic signed POST → JSON response.
-    async fn post_json<Req, Res>(&self, path: &str, payload: Req, password: &Password) -> HandlerResult<Res>
+    async fn post_json<Req, Res>(
+        &self,
+        path: &str,
+        payload: Req,
+        password: &Password,
+    ) -> HandlerResult<Res>
     where
         Req: DeriveToken + Serialize,
         Res: for<'de> Deserialize<'de>,
@@ -261,7 +269,8 @@ impl Client {
         payload: ConfirmPaymentReq,
     ) -> HandlerResult<ConfirmPaymentRes> {
         let credentials = self.credentials_required()?;
-        self.post_json("Confirm", payload, &credentials.password).await
+        self.post_json("Confirm", payload, &credentials.password)
+            .await
     }
 
     pub async fn confirm_payment_with_credentials(
@@ -282,7 +291,8 @@ impl Client {
         payload: CancelPaymentReq,
     ) -> HandlerResult<CancelPaymentRes> {
         let credentials = self.credentials_required()?;
-        self.post_json("Cancel", payload, &credentials.password).await
+        self.post_json("Cancel", payload, &credentials.password)
+            .await
     }
 
     pub async fn cancel_payment_with_credentials(
@@ -303,7 +313,8 @@ impl Client {
         payload: ChargePaymentReq,
     ) -> HandlerResult<ChargePaymentRes> {
         let credentials = self.credentials_required()?;
-        self.post_json("Charge", payload, &credentials.password).await
+        self.post_json("Charge", payload, &credentials.password)
+            .await
     }
 
     pub async fn charge_payment_with_credentials(
@@ -321,7 +332,8 @@ impl Client {
     /// Получить текущий статус платежа.
     pub async fn get_payment_state(&self, payload: GetStateReq) -> HandlerResult<GetStateRes> {
         let credentials = self.credentials_required()?;
-        self.post_json("GetState", payload, &credentials.password).await
+        self.post_json("GetState", payload, &credentials.password)
+            .await
     }
 
     pub async fn get_payment_state_with_credentials(
@@ -342,7 +354,8 @@ impl Client {
         payload: SendClosingReceiptReq,
     ) -> HandlerResult<SendClosingReceiptRes> {
         let credentials = self.credentials_required()?;
-        self.post_json("SendClosingReceipt", payload, &credentials.password).await
+        self.post_json("SendClosingReceipt", payload, &credentials.password)
+            .await
     }
 
     pub async fn send_closing_receipt_with_credentials(
@@ -352,7 +365,8 @@ impl Client {
         password: &Password,
     ) -> HandlerResult<SendClosingReceiptRes> {
         payload.terminal_key = terminal_key.clone();
-        self.post_json("SendClosingReceipt", payload, password).await
+        self.post_json("SendClosingReceipt", payload, password)
+            .await
     }
 
     // ─── ResendNotification ───────────────────────────────────────────────────
@@ -363,7 +377,8 @@ impl Client {
         payload: ResendNotificationReq,
     ) -> HandlerResult<ResendNotificationRes> {
         let credentials = self.credentials_required()?;
-        self.post_json("Resend", payload, &credentials.password).await
+        self.post_json("Resend", payload, &credentials.password)
+            .await
     }
 
     // ─── AddCustomer ─────────────────────────────────────────────────────────
@@ -371,7 +386,8 @@ impl Client {
     /// Зарегистрировать покупателя.
     pub async fn add_customer(&self, payload: AddCustomerReq) -> HandlerResult<AddCustomerRes> {
         let credentials = self.credentials_required()?;
-        self.post_json("AddCustomer", payload, &credentials.password).await
+        self.post_json("AddCustomer", payload, &credentials.password)
+            .await
     }
 
     pub async fn add_customer_with_credentials(
@@ -389,7 +405,8 @@ impl Client {
     /// Получить данные покупателя.
     pub async fn get_customer(&self, payload: GetCustomerReq) -> HandlerResult<GetCustomerRes> {
         let credentials = self.credentials_required()?;
-        self.post_json("GetCustomer", payload, &credentials.password).await
+        self.post_json("GetCustomer", payload, &credentials.password)
+            .await
     }
 
     pub async fn get_customer_with_credentials(
@@ -410,7 +427,8 @@ impl Client {
         payload: RemoveCustomerReq,
     ) -> HandlerResult<RemoveCustomerRes> {
         let credentials = self.credentials_required()?;
-        self.post_json("RemoveCustomer", payload, &credentials.password).await
+        self.post_json("RemoveCustomer", payload, &credentials.password)
+            .await
     }
 
     pub async fn remove_customer_with_credentials(
@@ -428,7 +446,8 @@ impl Client {
     /// Инициировать привязку карты к покупателю.
     pub async fn add_card(&self, payload: AddCardReq) -> HandlerResult<AddCardRes> {
         let credentials = self.credentials_required()?;
-        self.post_json("AddCard", payload, &credentials.password).await
+        self.post_json("AddCard", payload, &credentials.password)
+            .await
     }
 
     pub async fn add_card_with_credentials(
@@ -449,7 +468,8 @@ impl Client {
     /// failure, so this method uses its own deserialization path.
     pub async fn get_card_list(&self, payload: GetCardListReq) -> Result<Vec<CardInfo>, Error> {
         let credentials = self.credentials_required()?;
-        self.get_card_list_inner(payload, &credentials.password).await
+        self.get_card_list_inner(payload, &credentials.password)
+            .await
     }
 
     pub async fn get_card_list_with_credentials(
@@ -496,7 +516,8 @@ impl Client {
     /// Удалить привязанную карту покупателя.
     pub async fn remove_card(&self, payload: RemoveCardReq) -> HandlerResult<RemoveCardRes> {
         let credentials = self.credentials_required()?;
-        self.post_json("RemoveCard", payload, &credentials.password).await
+        self.post_json("RemoveCard", payload, &credentials.password)
+            .await
     }
 
     pub async fn remove_card_with_credentials(

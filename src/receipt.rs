@@ -98,6 +98,7 @@ impl Receipt {
         }
     }
 
+    /// Установить версию ФФД.
     pub fn ffd_version(mut self, version: FfdVersion) -> Self {
         match &mut self {
             Self::FFD105 { ffd_version, .. } => *ffd_version = Some(version),
@@ -106,6 +107,7 @@ impl Receipt {
         self
     }
 
+    /// Установить электронную почту покупателя.
     pub fn email(mut self, email: &str) -> Self {
         match &mut self {
             Self::FFD105 { email: value, .. } | Self::FFD12 { email: value, .. } => {
@@ -115,6 +117,7 @@ impl Receipt {
         self
     }
 
+    /// Установить номер телефона покупателя.
     pub fn phone(mut self, phone: &str) -> Self {
         match &mut self {
             Self::FFD105 { phone: value, .. } | Self::FFD12 { phone: value, .. } => {
@@ -124,6 +127,7 @@ impl Receipt {
         self
     }
 
+    /// Установить детали платежа.
     pub fn payments(mut self, payments: Payments) -> Self {
         match &mut self {
             Self::FFD105 {
@@ -176,31 +180,37 @@ impl ItemFFD105 {
         }
     }
 
+    /// Установить способ расчета.
     pub fn payment_method(mut self, payment_method: PaymentMethod) -> Self {
         self.payment_method = payment_method;
         self
     }
 
+    /// Установить признак предмета расчета.
     pub fn payment_object(mut self, payment_object: PaymentObjectFF105) -> Self {
         self.payment_object = payment_object;
         self
     }
 
+    /// Установить ставку НДС.
     pub fn tax(mut self, tax: Tax) -> Self {
         self.tax = tax;
         self
     }
 
+    /// Установить штрих-код EAN-13.
     pub fn ean_13(mut self, ean_13: &str) -> Self {
         self.ean_13 = Some(ean_13.to_string());
         self
     }
 
+    /// Установить данные агента.
     pub fn agent_data(mut self, agent_data: AgentData) -> Self {
         self.agent_data = Some(agent_data);
         self
     }
 
+    /// Установить данные поставщика.
     pub fn supplier_info(mut self, supplier_info: SupplierInfo) -> Self {
         self.supplier_info = Some(supplier_info);
         self
@@ -288,51 +298,61 @@ impl ItemFFD12 {
         }
     }
 
+    /// Установить способ расчета.
     pub fn payment_method(mut self, payment_method: PaymentMethod) -> Self {
         self.payment_method = payment_method;
         self
     }
 
+    /// Установить ставку НДС.
     pub fn tax(mut self, tax: Tax) -> Self {
         self.tax = tax;
         self
     }
 
+    /// Установить дополнительный реквизит предмета расчета.
     pub fn user_data(mut self, user_data: &str) -> Self {
         self.user_data = user_data.to_string();
         self
     }
 
+    /// Установить сумму акциза.
     pub fn excise(mut self, excise: &str) -> Self {
         self.excise = excise.to_string();
         self
     }
 
+    /// Установить код страны происхождения товара.
     pub fn country_code(mut self, country_code: &str) -> Self {
         self.country_code = country_code.to_string();
         self
     }
 
+    /// Установить номер таможенной декларации.
     pub fn declaration_number(mut self, declaration_number: &str) -> Self {
         self.declaration_number = declaration_number.to_string();
         self
     }
 
+    /// Установить единицу измерения.
     pub fn measurement_unit(mut self, measurement_unit: MeasurementUnit) -> Self {
         self.measurement_unit = measurement_unit;
         self
     }
 
+    /// Установить режим обработки кода маркировки.
     pub fn mark_processing_mode(mut self, mark_processing_mode: &str) -> Self {
         self.mark_processing_mode = mark_processing_mode.to_string();
         self
     }
 
+    /// Установить данные агента.
     pub fn agent_data(mut self, agent_data: AgentData) -> Self {
         self.agent_data = agent_data;
         self
     }
 
+    /// Установить данные поставщика.
     pub fn supplier_info(mut self, supplier_info: SupplierInfo) -> Self {
         self.supplier_info = supplier_info;
         self
@@ -451,21 +471,25 @@ impl Payments {
         }
     }
 
+    /// Установить сумму оплаты наличными.
     pub fn cash(mut self, cash: u32) -> Self {
         self.cash = Some(cash);
         self
     }
 
+    /// Установить сумму оплаты авансом.
     pub fn advance_payment(mut self, advance_payment: u32) -> Self {
         self.advance_payment = Some(advance_payment);
         self
     }
 
+    /// Установить сумму оплаты в кредит.
     pub fn credit(mut self, credit: u32) -> Self {
         self.credit = Some(credit);
         self
     }
 
+    /// Установить сумму оплаты предоплатой.
     pub fn provision(mut self, provision: u32) -> Self {
         self.provision = Some(provision);
         self

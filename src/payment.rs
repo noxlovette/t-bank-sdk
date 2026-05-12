@@ -98,46 +98,55 @@ impl InitPaymentReq {
         }
     }
 
+    /// Установить описание заказа.
     pub fn description(mut self, description: &str) -> Self {
         self.description = Some(description.to_string());
         self
     }
 
+    /// Установить идентификатор покупателя.
     pub fn customer_key(mut self, ck: &str) -> Self {
         self.customer_key = Some(ck.to_string());
         self
     }
 
+    /// Установить признак рекуррентного платежа.
     pub fn recurrent(mut self) -> Self {
         self.recurrent = Some("Y".to_string());
         self
     }
 
+    /// Установить тип оплаты.
     pub fn pay_type(mut self, pt: PayType) -> Self {
         self.pay_type = Some(pt);
         self
     }
 
+    /// Установить язык платежной формы.
     pub fn language(mut self, l: Language) -> Self {
         self.language = Some(l);
         self
     }
 
+    /// Установить URL для уведомлений.
     pub fn notification_url(mut self, url: &str) -> Self {
         self.notification_url = Url::parse(url).ok();
         self
     }
 
+    /// Установить URL для перенаправления при успешной оплате.
     pub fn success_url(mut self, url: &str) -> Self {
         self.success_url = Url::parse(url).ok();
         self
     }
 
+    /// Установить URL для перенаправления при ошибке оплаты.
     pub fn fail_url(mut self, url: &str) -> Self {
         self.fail_url = Url::parse(url).ok();
         self
     }
 
+    /// Установить срок жизни ссылки на оплату.
     pub fn redirect_due_date(mut self, rdd: DateTime<Utc>) -> Self {
         let delta = rdd - Utc::now();
         // Must be between 1 minute and 90 days from now.
@@ -146,16 +155,19 @@ impl InitPaymentReq {
         self
     }
 
+    /// Установить дополнительные параметры (DATA).
     pub fn data(mut self, data: serde_json::Value) -> Self {
         self.data = Some(data);
         self
     }
 
+    /// Установить данные чека.
     pub fn receipt(mut self, receipt: Receipt) -> Self {
         self.receipt = Some(receipt);
         self
     }
 
+    /// Установить список магазинов (для маркетплейсов).
     pub fn shops(mut self, shops: Vec<Shop>) -> Self {
         self.shops = shops;
         self
@@ -332,11 +344,13 @@ impl Shop {
         }
     }
 
+    /// Установить название магазина.
     pub fn name(mut self, name: &str) -> Self {
         self.name = Some(name.to_string());
         self
     }
 
+    /// Установить комиссию.
     pub fn fee(mut self, fee: &str) -> Self {
         self.fee = Some(fee.to_string());
         self
