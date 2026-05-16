@@ -671,7 +671,9 @@ impl_string_conversions_default!(PaymentMethod);
 /// composite — составной предмет расчета;
 /// another — иной предмет расчета.
 /// Если значение не передано, по умолчанию в онлайн-кассу отправляется признак предмета расчета commodity.
-#[derive(Serialize, Deserialize, Debug, Default, ToSchema, Display, AsRefStr, EnumString)]
+#[derive(
+    Serialize, Deserialize, Debug, Default, ToSchema, Display, AsRefStr, EnumString, Clone,
+)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum PaymentObjectFF105 {
@@ -788,7 +790,7 @@ impl_string_conversions_default!(PaymentObjectFF12);
 /// - vat110 — НДС чека по расчетной ставке 10/110;
 /// - vat120 — НДС чека по расчетной ставке 20/120;
 /// - vat122 — НДС чека по расчетной ставке 22/122 (с 01.01.2026).
-#[derive(Serialize, Deserialize, Debug, Display, EnumString, Default, ToSchema)]
+#[derive(Serialize, Deserialize, Debug, Display, EnumString, Default, ToSchema, Clone)]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
 pub enum Tax {
