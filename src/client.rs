@@ -500,14 +500,14 @@ impl Client {
 
         // Success → JSON array; error → standard error object.
         let value: serde_json::Value =
-            serde_json::from_slice(&bytes).map_err(|e| Error::Api(e.to_string()))?;
+            serde_json::from_slice(&bytes).map_err(|e| Error::SimpleApi(e.to_string()))?;
 
         if value.is_array() {
-            serde_json::from_value(value).map_err(|e| Error::Api(e.to_string()))
+            serde_json::from_value(value).map_err(|e| Error::SimpleApi(e.to_string()))
         } else {
             let code = value["ErrorCode"].as_str().unwrap_or("unknown");
             let msg = value["Message"].as_str().unwrap_or("unknown error");
-            Err(Error::Api(format!("{code}: {msg}")))
+            Err(Error::SimpleApi(format!("{code}: {msg}")))
         }
     }
 
