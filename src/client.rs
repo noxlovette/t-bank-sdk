@@ -6,8 +6,9 @@ use crate::{
     RemoveCustomerRes, ResendNotificationReq, ResendNotificationRes, SendClosingReceiptReq,
     SendClosingReceiptRes, TokenWrapper,
 };
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use std::{ops::Deref, time::Duration};
 use tracing::debug;
 
 pub const PRODUCTION_BASE: &str = "https://securepay.tinkoff.ru/v2";
@@ -66,8 +67,9 @@ struct Credentials {
 /// Requirements: <= 20 characters
 ///
 /// Идентификатор терминала. Выдается мерчанту в Т‑Бизнес при заведении терминала.
-#[derive(Clone, Debug, Deserialize, Serialize, Default)]
-#[serde(transparent)]
+#[derive(Clone, Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct TerminalKey(String);
 
 impl TerminalKey {
@@ -87,6 +89,20 @@ impl TerminalKey {
         let tk = std::env::var("TERMINAL_ID")
             .map_err(|_| Error::Config("TERMINAL_ID variable is missing".to_string()))?;
         Self::new(tk)
+    }
+}
+
+impl Deref for TerminalKey {
+    type Target = String;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Deref for Password {
+    type Target = String;
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
@@ -219,7 +235,10 @@ impl Client {
             )
         })
     }
+}
 
+#[cfg(feature = "serde")]
+impl Client {
     /// Generic signed POST → JSON response.
     async fn post_json<Req, Res>(
         &self,

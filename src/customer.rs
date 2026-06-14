@@ -1,24 +1,24 @@
 use crate::{TerminalKey, impl_string_conversions_default};
-use serde::{Deserialize, Serialize};
 use strum::{AsRefStr, Display, EnumString};
 use url::Url;
-use utoipa::ToSchema;
 
 // ─── AddCustomer ─────────────────────────────────────────────────────────────
 
 /// Зарегистрировать покупателя.
-#[derive(Debug, Serialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct AddCustomerReq {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     /// Идентификатор покупателя в системе мерчанта (до 36 символов).
     pub customer_key: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub ip: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub email: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub phone: Option<String>,
 }
 
@@ -50,10 +50,12 @@ impl AddCustomerReq {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct AddCustomerRes {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     pub customer_key: String,
 }
@@ -61,13 +63,15 @@ pub struct AddCustomerRes {
 // ─── GetCustomer ─────────────────────────────────────────────────────────────
 
 /// Получить данные покупателя.
-#[derive(Debug, Serialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct GetCustomerReq {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     pub customer_key: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub ip: Option<String>,
 }
 
@@ -87,10 +91,12 @@ impl GetCustomerReq {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct GetCustomerRes {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     pub customer_key: String,
     pub email: Option<String>,
@@ -100,13 +106,15 @@ pub struct GetCustomerRes {
 // ─── RemoveCustomer ───────────────────────────────────────────────────────────
 
 /// Удалить покупателя и все привязанные к нему карты.
-#[derive(Debug, Serialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct RemoveCustomerReq {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     pub customer_key: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub ip: Option<String>,
 }
 
@@ -126,10 +134,12 @@ impl RemoveCustomerReq {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct RemoveCustomerRes {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     pub customer_key: String,
 }
@@ -137,23 +147,25 @@ pub struct RemoveCustomerRes {
 // ─── Shared card types ────────────────────────────────────────────────────────
 
 /// Тип проверки карты при привязке.
-#[derive(Debug, Serialize, Deserialize, Default, ToSchema, Display, AsRefStr, EnumString)]
+#[derive(Debug, Default, Display, AsRefStr, EnumString)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub enum CheckType {
     /// Без проверки (только сохранение реквизитов).
     #[default]
-    #[serde(rename = "NO")]
+    #[cfg_attr(feature = "serde", serde(rename = "NO"))]
     #[strum(serialize = "NO")]
     No,
     /// Холдирование 1 руб. без 3DS.
-    #[serde(rename = "HOLD")]
+    #[cfg_attr(feature = "serde", serde(rename = "HOLD"))]
     #[strum(serialize = "HOLD")]
     Hold,
     /// Проверка с 3DS без холдирования.
-    #[serde(rename = "3DS")]
+    #[cfg_attr(feature = "serde", serde(rename = "3DS"))]
     #[strum(serialize = "3DS")]
     ThreeDs,
     /// Проверка с 3DS и холдированием 1 руб.
-    #[serde(rename = "3DSHOLD")]
+    #[cfg_attr(feature = "serde", serde(rename = "3DSHOLD"))]
     #[strum(serialize = "3DSHOLD")]
     ThreeDsHold,
 }
@@ -161,7 +173,9 @@ pub enum CheckType {
 impl_string_conversions_default!(CheckType);
 
 /// Статус карты в системе Т‑Бизнес.
-#[derive(Debug, Serialize, Deserialize, Default, ToSchema, Display, AsRefStr, EnumString)]
+#[derive(Debug, Default, Display, AsRefStr, EnumString)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum CardStatus {
     /// Активна.
@@ -176,8 +190,10 @@ pub enum CardStatus {
 impl_string_conversions_default!(CardStatus);
 
 /// Информация о привязанной карте.
-#[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct CardInfo {
     pub card_id: String,
     /// Маскированный номер карты, например 430000****0777.
@@ -195,18 +211,20 @@ pub struct CardInfo {
 // ─── AddCard ─────────────────────────────────────────────────────────────────
 
 /// Инициировать привязку карты к покупателю.
-#[derive(Debug, Serialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct AddCardReq {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     pub customer_key: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub check_type: Option<CheckType>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub ip: Option<String>,
     /// Признак резидентства карты: true — РФ, false — не РФ, null — универсальный.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub resident_state: Option<bool>,
 }
 
@@ -238,33 +256,37 @@ impl AddCardReq {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct AddCardRes {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     pub customer_key: String,
     /// Уникальный идентификатор запроса на привязку карты.
     pub request_key: String,
     /// Ссылка на форму привязки карты.
-    #[serde(rename = "PaymentURL")]
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "serde", serde(rename = "PaymentURL"))]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub payment_url: Option<Url>,
 }
 
 // ─── GetCardList ──────────────────────────────────────────────────────────────
 
 /// Получить список привязанных карт покупателя.
-#[derive(Debug, Serialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct GetCardListReq {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     pub customer_key: String,
     /// Фильтровать по признаку сохранения для оплаты в один клик.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub saved_card: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub ip: Option<String>,
 }
 
@@ -293,15 +315,17 @@ impl GetCardListReq {
 // ─── RemoveCard ───────────────────────────────────────────────────────────────
 
 /// Удалить привязанную карту покупателя.
-#[derive(Debug, Serialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct RemoveCardReq {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     pub customer_key: String,
     /// Идентификатор карты в системе Т‑Бизнес (до 40 символов).
     pub card_id: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub ip: Option<String>,
 }
 
@@ -326,10 +350,12 @@ impl RemoveCardReq {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct RemoveCardRes {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     pub customer_key: String,
     pub card_id: String,

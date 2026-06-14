@@ -34,7 +34,6 @@ impl AppState {
     }
 }
 
-#[axum::debug_handler]
 async fn test_payment(State(state): State<AppState>) -> Json<ErrorWrapper<InitPaymentRes>> {
     let payload = InitPaymentReq::new(state.client.terminal_key(), 1000, "32453")
         .receipt(

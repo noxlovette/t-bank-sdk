@@ -3,14 +3,15 @@ use crate::{
     GetCardListReq, GetCustomerReq, GetStateReq, InitPaymentReq, Password, RemoveCardReq,
     RemoveCustomerReq, ResendNotificationReq, SendClosingReceiptReq,
 };
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
+#[cfg(feature = "serde")]
+use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 
 /// Подпись запроса. [Как сформировать.](https://developer.tbank.ru/eacq/intro/developer/token)
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(transparent)]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct Token(String);
 
 impl Token {
@@ -20,14 +21,15 @@ impl Token {
 }
 
 /// This wrapper will generate a token for given payload
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
 pub struct TokenWrapper<P>
 where
     P: DeriveToken,
 {
     token: Token,
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     payload: P,
 }
 
@@ -55,26 +57,29 @@ fn build_token(fields: BTreeMap<String, String>) -> Token {
     Token::from_string(format!("{hash:x}"))
 }
 
+#[cfg(feature = "serde")]
 fn insert<T: Serialize>(map: &mut BTreeMap<String, String>, key: &str, value: &T) {
     map.insert(key.to_string(), serialize_token_value(value));
 }
 
+#[cfg(feature = "serde")]
 fn insert_opt<T: Serialize>(map: &mut BTreeMap<String, String>, key: &str, value: &Option<T>) {
     if let Some(v) = value {
         map.insert(key.to_string(), serialize_token_value(v));
     }
 }
 
+#[cfg(feature = "serde")]
 pub fn serialize_token_value<T>(value: &T) -> String
 where
     T: Serialize,
 {
     match serde_json::to_value(value).expect("token fields must serialize") {
-        Value::String(value) => value,
-        Value::Number(value) => value.to_string(),
-        Value::Bool(value) => value.to_string(),
-        Value::Null => String::new(),
-        Value::Array(_) | Value::Object(_) => {
+        serde_json::Value::String(value) => value,
+        serde_json::Value::Number(value) => value.to_string(),
+        serde_json::Value::Bool(value) => value.to_string(),
+        serde_json::Value::Null => String::new(),
+        serde_json::Value::Array(_) | serde_json::Value::Object(_) => {
             unreachable!("token generation only supports scalar root fields")
         }
     }
@@ -82,6 +87,7 @@ where
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
+#[cfg(feature = "serde")]
 impl DeriveToken for InitPaymentReq {
     fn create_token(&self, password: &Password) -> Token {
         let mut fields = BTreeMap::new();
@@ -106,6 +112,7 @@ impl DeriveToken for InitPaymentReq {
 
 // ─── Confirm ─────────────────────────────────────────────────────────────────
 
+#[cfg(feature = "serde")]
 impl DeriveToken for ConfirmPaymentReq {
     fn create_token(&self, password: &Password) -> Token {
         let mut fields = BTreeMap::new();
@@ -119,6 +126,7 @@ impl DeriveToken for ConfirmPaymentReq {
 
 // ─── Cancel ──────────────────────────────────────────────────────────────────
 
+#[cfg(feature = "serde")]
 impl DeriveToken for CancelPaymentReq {
     fn create_token(&self, password: &Password) -> Token {
         let mut fields = BTreeMap::new();
@@ -133,6 +141,7 @@ impl DeriveToken for CancelPaymentReq {
 
 // ─── Charge ──────────────────────────────────────────────────────────────────
 
+#[cfg(feature = "serde")]
 impl DeriveToken for ChargePaymentReq {
     fn create_token(&self, password: &Password) -> Token {
         let mut fields = BTreeMap::new();
@@ -146,6 +155,7 @@ impl DeriveToken for ChargePaymentReq {
 
 // ─── GetState ────────────────────────────────────────────────────────────────
 
+#[cfg(feature = "serde")]
 impl DeriveToken for GetStateReq {
     fn create_token(&self, password: &Password) -> Token {
         let mut fields = BTreeMap::new();
@@ -158,6 +168,7 @@ impl DeriveToken for GetStateReq {
 
 // ─── SendClosingReceipt ───────────────────────────────────────────────────────
 
+#[cfg(feature = "serde")]
 impl DeriveToken for SendClosingReceiptReq {
     fn create_token(&self, password: &Password) -> Token {
         let mut fields = BTreeMap::new();
@@ -170,6 +181,7 @@ impl DeriveToken for SendClosingReceiptReq {
 
 // ─── ResendNotification ───────────────────────────────────────────────────────
 
+#[cfg(feature = "serde")]
 impl DeriveToken for ResendNotificationReq {
     fn create_token(&self, password: &Password) -> Token {
         let mut fields = BTreeMap::new();
@@ -181,6 +193,7 @@ impl DeriveToken for ResendNotificationReq {
 
 // ─── AddCustomer ─────────────────────────────────────────────────────────────
 
+#[cfg(feature = "serde")]
 impl DeriveToken for AddCustomerReq {
     fn create_token(&self, password: &Password) -> Token {
         let mut fields = BTreeMap::new();
@@ -195,6 +208,7 @@ impl DeriveToken for AddCustomerReq {
 
 // ─── GetCustomer ─────────────────────────────────────────────────────────────
 
+#[cfg(feature = "serde")]
 impl DeriveToken for GetCustomerReq {
     fn create_token(&self, password: &Password) -> Token {
         let mut fields = BTreeMap::new();
@@ -207,6 +221,7 @@ impl DeriveToken for GetCustomerReq {
 
 // ─── RemoveCustomer ───────────────────────────────────────────────────────────
 
+#[cfg(feature = "serde")]
 impl DeriveToken for RemoveCustomerReq {
     fn create_token(&self, password: &Password) -> Token {
         let mut fields = BTreeMap::new();
@@ -219,6 +234,7 @@ impl DeriveToken for RemoveCustomerReq {
 
 // ─── AddCard ─────────────────────────────────────────────────────────────────
 
+#[cfg(feature = "serde")]
 impl DeriveToken for AddCardReq {
     fn create_token(&self, password: &Password) -> Token {
         let mut fields = BTreeMap::new();
@@ -232,6 +248,7 @@ impl DeriveToken for AddCardReq {
 
 // ─── GetCardList ──────────────────────────────────────────────────────────────
 
+#[cfg(feature = "serde")]
 impl DeriveToken for GetCardListReq {
     fn create_token(&self, password: &Password) -> Token {
         let mut fields = BTreeMap::new();
@@ -244,6 +261,7 @@ impl DeriveToken for GetCardListReq {
 
 // ─── RemoveCard ───────────────────────────────────────────────────────────────
 
+#[cfg(feature = "serde")]
 impl DeriveToken for RemoveCardReq {
     fn create_token(&self, password: &Password) -> Token {
         let mut fields = BTreeMap::new();

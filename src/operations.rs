@@ -1,27 +1,27 @@
 use crate::{Receipt, TerminalKey};
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
 use crate::payment::{PaymentStatus, Shop};
 
 // ─── Confirm ─────────────────────────────────────────────────────────────────
 
 /// Подтверждение двухстадийного платежа (после статуса AUTHORIZED).
-#[derive(Debug, Serialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct ConfirmPaymentReq {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     /// Идентификатор платежа в системе Т‑Бизнес.
     pub payment_id: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub ip: Option<String>,
     /// Сумма в копейках. Если не передана — подтверждается полная сумма.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub amount: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub receipt: Option<Receipt>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
     pub shops: Vec<Shop>,
 }
 
@@ -59,10 +59,12 @@ impl ConfirmPaymentReq {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct ConfirmPaymentRes {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     pub status: PaymentStatus,
     pub payment_id: String,
@@ -76,23 +78,25 @@ pub struct ConfirmPaymentRes {
 ///
 /// Если Amount не передан, отменяется полная сумма. Для частичного возврата
 /// передайте Amount < исходной суммы.
-#[derive(Debug, Serialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct CancelPaymentReq {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     pub payment_id: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub ip: Option<String>,
     /// Сумма возврата в копейках. По умолчанию — полная сумма платежа.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub amount: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub receipt: Option<Receipt>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
     pub shops: Vec<Shop>,
     /// Идентификатор операции на стороне мерчанта (до 256 символов).
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub external_request_id: Option<String>,
 }
 
@@ -136,10 +140,12 @@ impl CancelPaymentReq {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct CancelPaymentRes {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     pub status: PaymentStatus,
     pub payment_id: String,
@@ -157,22 +163,24 @@ pub struct CancelPaymentRes {
 ///
 /// Требует, чтобы ранее был проведен родительский платеж с Recurrent=Y и
 /// получен RebillId.
-#[derive(Debug, Serialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct ChargePaymentReq {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     /// Идентификатор платежа, созданного через Init.
     pub payment_id: String,
     /// Уникальный идентификатор сохраненных реквизитов карты.
     pub rebill_id: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub ip: Option<String>,
     /// Отправить уведомление покупателю на email.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub send_email: Option<bool>,
     /// Email покупателя (обязателен если SendEmail=true).
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub info_email: Option<String>,
 }
 
@@ -204,10 +212,12 @@ impl ChargePaymentReq {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct ChargePaymentRes {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     pub status: PaymentStatus,
     pub payment_id: String,
@@ -218,13 +228,15 @@ pub struct ChargePaymentRes {
 // ─── GetState ────────────────────────────────────────────────────────────────
 
 /// Получить статус платежа.
-#[derive(Debug, Serialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct GetStateReq {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     pub payment_id: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub ip: Option<String>,
 }
 
@@ -244,10 +256,12 @@ impl GetStateReq {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct GetStateRes {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     pub status: PaymentStatus,
     pub payment_id: String,
@@ -258,10 +272,12 @@ pub struct GetStateRes {
 // ─── SendClosingReceipt ───────────────────────────────────────────────────────
 
 /// Отправить закрывающий чек (для двухстадийных платежей, постоплаты и т.п.).
-#[derive(Debug, Serialize, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct SendClosingReceiptReq {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     pub payment_id: String,
     pub receipt: Receipt,
@@ -277,10 +293,12 @@ impl SendClosingReceiptReq {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct SendClosingReceiptRes {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     pub payment_id: String,
 }
@@ -290,10 +308,12 @@ pub struct SendClosingReceiptRes {
 /// Повторная отправка всех неотправленных уведомлений.
 ///
 /// Возвращает количество повторно отправленных уведомлений.
-#[derive(Debug, Serialize, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct ResendNotificationReq {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
 }
 
@@ -305,10 +325,12 @@ impl ResendNotificationReq {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct ResendNotificationRes {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     /// Количество повторно отправленных уведомлений.
     pub count: u32,

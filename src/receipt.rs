@@ -1,13 +1,13 @@
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
 use strum::{AsRefStr, Display, EnumString};
-use utoipa::ToSchema;
 
 use crate::impl_string_conversions_default;
 
 /// JSON-объект с данными чека. Параметр обязательный, если подключена онлайн-касса.
-#[derive(Serialize, Deserialize, Debug, ToSchema)]
-#[serde(rename_all_fields = "PascalCase", untagged)]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all_fields = "PascalCase", untagged))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub enum Receipt {
     FFD105 {
         /// Массив позиций чека с информацией о товарах. Количество товаров в чеке — не больше 100.
@@ -142,8 +142,10 @@ impl Receipt {
 }
 
 /// Позиция чека с информацией о товарах.
-#[derive(Serialize, Deserialize, Debug, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct ItemFFD105 {
     /// Тег ФФД: 1030
     ///
@@ -218,8 +220,10 @@ impl ItemFFD105 {
 }
 
 /// Позиция чека с информацией о товарах.
-#[derive(Serialize, Deserialize, Debug, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct ItemFFD12 {
     agent_data: AgentData,
     supplier_info: SupplierInfo,
@@ -360,8 +364,10 @@ impl ItemFFD12 {
 }
 
 /// Данные агента. Параметр обязательный, если используется агентская схема.
-#[derive(Serialize, Deserialize, Debug, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct AgentData {
     agent_sign: AgentSign,
     operation_name: String,
@@ -388,8 +394,10 @@ impl Default for AgentData {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct SupplierInfo {
     phones: Vec<String>,
     name: String,
@@ -403,8 +411,10 @@ pub struct SupplierInfo {
 /// Включается в чек, если предметом расчета является товар, который подлежит обязательной маркировке сканером — соответствующий код в поле paymentObject.
 ///
 /// С 01.09.2025 для чеков с маркированными товарами обязательно передается часовая зона места расчета (тег 1011). По умолчанию — Москва. Для изменения напишите на acq_help@tbank.ru.
-#[derive(Serialize, Deserialize, Debug, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct MarkCode {
     mark_code_type: MarkCodeType,
     value: String,
@@ -416,16 +426,20 @@ pub struct MarkCode {
 /// Пример:
 ///
 /// { "numenator": "1" "denominator" "2" }
-#[derive(Serialize, Deserialize, Debug, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct MarkQuantity {
     numerator: u32,
     denominator: u32,
 }
 
 /// Отраслевой реквизит предмета расчета.
-#[derive(Serialize, Deserialize, Debug, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct SectoralItemProps {
     /// Тег ФФД: 1262
     ///
@@ -450,8 +464,10 @@ pub struct SectoralItemProps {
 /// Если объект не передан, автоматически указывается итоговая сумма чека с видом оплаты «Безналичный».
 ///
 /// Если передан объект receipt.Payments, значение в Electronic должно быть равно итоговому значению Amount в методе Инициировать платеж. При этом сумма введенных значений по всем видам оплат, включая Electronic, должна быть равна сумме (Amount) всех товаров, которые были переданы в объекте receipt.Items.
-#[derive(Serialize, Deserialize, Debug, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct Payments {
     electronic: u32,
     cash: Option<u32>,
@@ -509,9 +525,11 @@ impl Payments {
 /// - attorney — поверенный;
 /// - commission_agent — комиссионер;
 /// - another — другой тип агента.
-#[derive(Serialize, Default, Deserialize, Debug, ToSchema, Display, AsRefStr, EnumString)]
+#[derive(Default, Debug, Display, AsRefStr, EnumString)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[strum(serialize_all = "snake_case")]
-#[serde(rename_all = "snake_case")]
 enum AgentSign {
     BankPayingAgent,
     BankPayingSubagent,
@@ -538,8 +556,10 @@ impl_string_conversions_default!(AgentSign);
 /// - EGAIS20 — код товара в формате ЕГАИС-2.0;
 /// - EGAIS30 — код товара в формате ЕГАИС-3.0;
 /// - RAWCODE — код маркировки, как он был прочитан сканером.
-#[derive(Serialize, Default, Deserialize, Debug, ToSchema, Display, AsRefStr, EnumString)]
-#[serde(rename_all = "UPPERCASE")]
+#[derive(Default, Debug, Display, AsRefStr, EnumString)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "UPPERCASE"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[strum(serialize_all = "UPPERCASE")]
 enum MarkCodeType {
     #[default]
@@ -558,58 +578,60 @@ enum MarkCodeType {
 
 impl_string_conversions_default!(MarkCodeType);
 
-#[derive(Debug, Serialize, Deserialize, Default, ToSchema, Display, AsRefStr, EnumString)]
+#[derive(Debug, Default, Display, AsRefStr, EnumString)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[strum(serialize_all = "snake_case")]
 pub enum MeasurementUnit {
-    #[serde(rename = "шт")]
+    #[cfg_attr(feature = "serde", serde(rename = "шт"))]
     Piece,
-    #[serde(rename = "г")]
+    #[cfg_attr(feature = "serde", serde(rename = "г"))]
     Gram,
-    #[serde(rename = "кг")]
+    #[cfg_attr(feature = "serde", serde(rename = "кг"))]
     Kilogram,
-    #[serde(rename = "т")]
+    #[cfg_attr(feature = "serde", serde(rename = "т"))]
     Ton,
-    #[serde(rename = "см")]
+    #[cfg_attr(feature = "serde", serde(rename = "см"))]
     Centimeter,
-    #[serde(rename = "дм")]
+    #[cfg_attr(feature = "serde", serde(rename = "дм"))]
     Decimeter,
-    #[serde(rename = "м")]
+    #[cfg_attr(feature = "serde", serde(rename = "м"))]
     Meter,
-    #[serde(rename = "см2")]
+    #[cfg_attr(feature = "serde", serde(rename = "см2"))]
     SquareCentimeter,
-    #[serde(rename = "дм2")]
+    #[cfg_attr(feature = "serde", serde(rename = "дм2"))]
     SquareDecimeter,
-    #[serde(rename = "м2")]
+    #[cfg_attr(feature = "serde", serde(rename = "м2"))]
     SquareMeter,
-    #[serde(rename = "мл")]
+    #[cfg_attr(feature = "serde", serde(rename = "мл"))]
     Milliliter,
-    #[serde(rename = "л")]
+    #[cfg_attr(feature = "serde", serde(rename = "л"))]
     Liter,
-    #[serde(rename = "м3")]
+    #[cfg_attr(feature = "serde", serde(rename = "м3"))]
     CubicMeter,
-    #[serde(rename = "кВт*ч")]
+    #[cfg_attr(feature = "serde", serde(rename = "кВт*ч"))]
     KilowattHour,
-    #[serde(rename = "Гкал")]
+    #[cfg_attr(feature = "serde", serde(rename = "Гкал"))]
     Gigacalorie,
-    #[serde(rename = "сут")]
+    #[cfg_attr(feature = "serde", serde(rename = "сут"))]
     Day,
-    #[serde(rename = "дн")]
+    #[cfg_attr(feature = "serde", serde(rename = "дн"))]
     DayAlt,
-    #[serde(rename = "ч")]
+    #[cfg_attr(feature = "serde", serde(rename = "ч"))]
     Hour,
-    #[serde(rename = "мин")]
+    #[cfg_attr(feature = "serde", serde(rename = "мин"))]
     Minute,
-    #[serde(rename = "с")]
+    #[cfg_attr(feature = "serde", serde(rename = "с"))]
     Second,
-    #[serde(rename = "Кбайт")]
+    #[cfg_attr(feature = "serde", serde(rename = "Кбайт"))]
     Kilobyte,
-    #[serde(rename = "Мбайт")]
+    #[cfg_attr(feature = "serde", serde(rename = "Мбайт"))]
     Megabyte,
-    #[serde(rename = "Гбайт")]
+    #[cfg_attr(feature = "serde", serde(rename = "Гбайт"))]
     Gigabyte,
-    #[serde(rename = "Тбайт")]
+    #[cfg_attr(feature = "serde", serde(rename = "Тбайт"))]
     Terabyte,
-    #[serde(rename = "-")]
+    #[cfg_attr(feature = "serde", serde(rename = "-"))]
     #[default]
     Other,
 }
@@ -633,8 +655,10 @@ impl_string_conversions_default!(MeasurementUnit);
 /// - credit_payment — оплата кредита.
 ///
 /// Если значение не передано, по умолчанию в онлайн-кассу отправляется признак предмета расчета full_payment.
-#[derive(Serialize, Deserialize, Debug, Default, ToSchema, Display, AsRefStr, EnumString)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Default, Display, AsRefStr, EnumString)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[strum(serialize_all = "snake_case")]
 pub enum PaymentMethod {
     FullPrepayment,
@@ -671,10 +695,10 @@ impl_string_conversions_default!(PaymentMethod);
 /// composite — составной предмет расчета;
 /// another — иной предмет расчета.
 /// Если значение не передано, по умолчанию в онлайн-кассу отправляется признак предмета расчета commodity.
-#[derive(
-    Serialize, Deserialize, Debug, Default, ToSchema, Display, AsRefStr, EnumString, Clone,
-)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Default, Display, AsRefStr, EnumString, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[strum(serialize_all = "snake_case")]
 pub enum PaymentObjectFF105 {
     #[default]
@@ -732,8 +756,10 @@ impl_string_conversions_default!(PaymentObjectFF105);
 /// - goods_without_marking_code — ТНМ;
 /// - goods_with_marking_code — ТМ;
 /// - another — иной предмет расчета.
-#[derive(Serialize, Deserialize, Debug, Default, Display, EnumString, ToSchema)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Default, Display, EnumString)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[strum(serialize_all = "snake_case")]
 enum PaymentObjectFF12 {
     #[default]
@@ -790,8 +816,10 @@ impl_string_conversions_default!(PaymentObjectFF12);
 /// - vat110 — НДС чека по расчетной ставке 10/110;
 /// - vat120 — НДС чека по расчетной ставке 20/120;
 /// - vat122 — НДС чека по расчетной ставке 22/122 (с 01.01.2026).
-#[derive(Serialize, Deserialize, Debug, Display, EnumString, Default, ToSchema, Clone)]
-#[serde(rename_all = "lowercase")]
+#[derive(Debug, Default, Display, EnumString, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "lowercase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[strum(serialize_all = "lowercase")]
 pub enum Tax {
     #[default]
@@ -822,8 +850,10 @@ impl_string_conversions_default!(Tax);
 /// - usn_income_outcome — упрощенная СН (доходы минус расходы). Налоговая автоматически определит АУСН по ИНН и пробьет чеки с нужной СНО;
 /// - esn — единый сельскохозяйственный налог;
 /// - patent — патентная СН.
-#[derive(Serialize, Deserialize, Debug, Default, ToSchema, Display, AsRefStr, EnumString)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Default, Display, AsRefStr, EnumString)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[strum(serialize_all = "snake_case")]
 pub enum Taxation {
     UsnIncome,
@@ -839,66 +869,51 @@ impl_string_conversions_default!(Taxation);
 /// Тег ФФД: 1245
 ///
 /// Числовой код вида документа, удостоверяющего личность.
-///
-/// Может принимать только следующие значения:
-///
-/// - 21 — паспорт гражданина Российской Федерации.
-/// - 22 — паспорт гражданина Российской Федерации, дипломатический паспорт, служебный паспорт, удостоверяющие личность гражданина Российской Федерации за пределами Российской Федерации.
-/// - 26 — временное удостоверение личности гражданина Российской Федерации, выдаваемое на период оформления паспорта гражданина Российской Федерации.
-/// - 27 — свидетельство о рождении гражданина Российской Федерации. Для граждан Российской Федерации в возрасте до 14 лотереи.
-/// - 28 — иные документы, признаваемые документами, удостоверяющими личность гражданина Российской Федерации в соответствии с законодательством Российской Федерации.
-/// - 31 — паспорт иностранного гражданина.
-/// - 32 — иные документы, признаваемые документами, удостоверяющими личность иностранного гражданина в соответствии с законодательством Российской Федерации и международным договором Российской Федерации.
-/// - 33 — документ, выданный иностранным государством и признаваемый в соответствии с международным договором Российской Федерации в качестве документа, удостоверяющего личность лица безгражданства.
-/// - 34 — вид на жительство, для лиц без гражданства.
-/// - 35 - разрешение на временное проживание, для лиц без гражданства.
-/// - 36 — свидетельство о рассмотрении ходатайства о признании лица без гражданства беженцем на территории Российской Федерации по существу.
-/// - 37 — удостоверение беженца.
-/// - 38 — иные документы, признаваемые документами, удостоверяющими личность лиц без гражданства в соответствии с  законодательством Российской Федерации и международным договором Российской Федерации.
-/// - 40 — документ, удостоверяющий личность лица, не имеющего действительного документа, удостоверяющего личность, на период рассмотрения заявления о признании гражданином Российской Федерации или о приеме в гражданство Российской  Федерации.
-#[derive(Serialize, Default, Deserialize, Debug, ToSchema, Display, AsRefStr, EnumString)]
+#[derive(Default, Debug, Display, AsRefStr, EnumString)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 enum DocumentCode {
     #[default]
-    #[serde(rename = "21")]
+    #[cfg_attr(feature = "serde", serde(rename = "21"))]
     #[strum(serialize = "21")]
     C21,
-    #[serde(rename = "22")]
+    #[cfg_attr(feature = "serde", serde(rename = "22"))]
     #[strum(serialize = "22")]
     C22,
-    #[serde(rename = "26")]
+    #[cfg_attr(feature = "serde", serde(rename = "26"))]
     #[strum(serialize = "26")]
     C26,
-    #[serde(rename = "27")]
+    #[cfg_attr(feature = "serde", serde(rename = "27"))]
     #[strum(serialize = "27")]
     C27,
-    #[serde(rename = "28")]
+    #[cfg_attr(feature = "serde", serde(rename = "28"))]
     #[strum(serialize = "28")]
     C28,
-    #[serde(rename = "31")]
+    #[cfg_attr(feature = "serde", serde(rename = "31"))]
     #[strum(serialize = "31")]
     C31,
-    #[serde(rename = "32")]
+    #[cfg_attr(feature = "serde", serde(rename = "32"))]
     #[strum(serialize = "32")]
     C32,
-    #[serde(rename = "33")]
+    #[cfg_attr(feature = "serde", serde(rename = "33"))]
     #[strum(serialize = "33")]
     C33,
-    #[serde(rename = "34")]
+    #[cfg_attr(feature = "serde", serde(rename = "34"))]
     #[strum(serialize = "34")]
     C34,
-    #[serde(rename = "35")]
+    #[cfg_attr(feature = "serde", serde(rename = "35"))]
     #[strum(serialize = "35")]
     C35,
-    #[serde(rename = "36")]
+    #[cfg_attr(feature = "serde", serde(rename = "36"))]
     #[strum(serialize = "36")]
     C36,
-    #[serde(rename = "37")]
+    #[cfg_attr(feature = "serde", serde(rename = "37"))]
     #[strum(serialize = "37")]
     C37,
-    #[serde(rename = "38")]
+    #[cfg_attr(feature = "serde", serde(rename = "38"))]
     #[strum(serialize = "38")]
     C38,
-    #[serde(rename = "40")]
+    #[cfg_attr(feature = "serde", serde(rename = "40"))]
     #[strum(serialize = "40")]
     C40,
 }
@@ -910,13 +925,15 @@ impl_string_conversions_default!(DocumentCode);
 /// Default: 1.05
 ///
 /// Версия ФФД.
-#[derive(Serialize, Deserialize, Debug, Default, ToSchema, Display, AsRefStr, EnumString)]
+#[derive(Debug, Default, Display, AsRefStr, EnumString)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub enum FfdVersion {
-    #[serde(rename = "1.2")]
+    #[cfg_attr(feature = "serde", serde(rename = "1.2"))]
     #[strum(serialize = "1.2")]
     V12,
     #[default]
-    #[serde(rename = "1.05")]
+    #[cfg_attr(feature = "serde", serde(rename = "1.05"))]
     #[strum(serialize = "1.05")]
     V105,
 }
@@ -924,7 +941,9 @@ pub enum FfdVersion {
 impl_string_conversions_default!(FfdVersion);
 
 /// Информация по клиенту.
-#[derive(Serialize, Deserialize, Debug, ToSchema)]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct ClientInfo {
     birthdate: String,
     citizenship: String,
@@ -933,14 +952,22 @@ pub struct ClientInfo {
     address: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, ToSchema)]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct OperatingCheckProps;
 
-#[derive(Serialize, Deserialize, Debug, ToSchema)]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct SectoralCheckProps;
 
-#[derive(Serialize, Deserialize, Debug, ToSchema)]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct AddUserProp;
 
-#[derive(Serialize, Deserialize, Debug, ToSchema)]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct AdditionalCheckProps;

@@ -1,8 +1,8 @@
-use serde::{Deserialize, Serialize};
 pub type HandlerResult<T> = Result<ErrorWrapper<T>, Error>;
 
-#[derive(Debug, Serialize, Deserialize, Default)]
-#[serde(transparent)]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct ErrorCode(pub String);
 
 #[derive(Debug, thiserror::Error)]
@@ -30,10 +30,11 @@ impl From<std::env::VarError> for Error {
     }
 }
 
-#[derive(Serialize, Debug, Deserialize)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
 pub struct ErrorWrapper<T> {
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     inner: Option<T>,
     /// Requirements: <= 255 characters
     ///

@@ -1,15 +1,15 @@
 use crate::{Receipt, TerminalKey, impl_string_conversions_default};
 use chrono::{DateTime, Duration, Utc};
-use serde::{Deserialize, Serialize};
 use strum::{AsRefStr, Display, EnumString};
 use url::Url;
-use utoipa::ToSchema;
 
 /// Запрос для инициации платежа
-#[derive(Debug, Serialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct InitPaymentReq {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     /// Сумма в копейках.
     ///
@@ -23,46 +23,46 @@ pub struct InitPaymentReq {
     /// Описание заказа. Значение параметра будет отображено на платежной форме.
     ///
     // Параметр обязательный при привязке и одновременной оплате через СБП. При оплате через СБП текст из этого параметра отобразится в мобильном банке клиента.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub description: Option<String>,
     /// Идентификатор покупателя в системе мерчанта. Нужен для сохранения карт на платежной форме — платежи в один клик.
     ///
     /// Параметр обязательный, если передан параметр Recurrent=Y и автоплатеж проводится по карте.
     ///
     /// Если передан, в уведомлении будут указаны [CustomerKey] и его CardId. Подробнее — в методе [Получить список карт клиента](https://developer.tbank.ru/eacq/api/get-card-list).
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub customer_key: Option<String>,
     /// Признак родительского CC-платежа. Обязателен для проведения операции с сохранением реквизитов карты покупателя.
     ///
     /// Если передается и установлен в Y, при платеже будут сохранены реквизиты карты покупателя. В этом случае после оплаты в уведомлении на AUTHORIZED будет передан параметр RebillId для использования в методе [Провести платеж по сохраненным реквизитам](https://developer.tbank.ru/eacq/api/charge). Для привязки и одновременной оплаты по CБП передавайте Y.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub recurrent: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub pay_type: Option<PayType>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub language: Option<Language>,
     /// URL на веб-сайте мерчанта, куда будет отправлен POST-запрос о статусе выполнения вызываемых методов — настраивается в личном кабинете.
     ///
     /// Если параметр передан, используется его значение, если нет — значение из настроек терминала.
     ///
     /// [Подробнее](https://developer.tbank.ru/eacq/intro/developer/notification)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "NotificationURL")]
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(feature = "serde", serde(rename = "NotificationURL"))]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub notification_url: Option<Url>,
     /// URL на веб-сайте мерчанта, куда будет переведен клиент в случае успешной оплаты — настраивается в личном кабинете.
     ///
     /// Если параметр передан, используется его значение, если нет — значение из настроек терминала.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "SuccessURL")]
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(feature = "serde", serde(rename = "SuccessURL"))]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub success_url: Option<Url>,
     /// URL на веб-сайте мерчанта, куда будет переведен клиент в случае неуспешной оплаты — настраивается в личном кабинете.
     ///
     /// Если параметр передан, используется его значение, если нет — значение из настроек терминала.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "FailURL")]
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(feature = "serde", serde(rename = "FailURL"))]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub fail_url: Option<Url>,
     /// Cрок жизни ссылки или динамического QR-кода СБП, если выбран этот способ оплаты.
     ///
@@ -77,14 +77,15 @@ pub struct InitPaymentReq {
     ///
     /// больше нуля — оно будет установлено в качестве срока жизни ссылки или динамического QR-кода;
     /// меньше нуля — устанавливается значение по умолчанию: 1440 мин. (1 сутки).
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub redirect_due_date: Option<DateTime<Utc>>,
+    #[cfg(feature = "serde")]
     #[serde(rename = "DATA")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub receipt: Option<Receipt>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
     pub shops: Vec<Shop>,
 }
 
@@ -156,6 +157,7 @@ impl InitPaymentReq {
     }
 
     /// Установить дополнительные параметры (DATA).
+    #[cfg(feature = "serde")]
     pub fn data(mut self, data: serde_json::Value) -> Self {
         self.data = Some(data);
         self
@@ -174,8 +176,10 @@ impl InitPaymentReq {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, ToSchema, Display, AsRefStr, EnumString)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[derive(Debug, Default, Display, AsRefStr, EnumString)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "SCREAMING_SNAKE_CASE"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum PaymentStatus {
     #[default]
@@ -193,10 +197,12 @@ pub enum PaymentStatus {
 
 impl_string_conversions_default!(PaymentStatus);
 
-#[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct PaymentNotificationRes {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     pub status: PaymentStatus,
     pub amount: u32,
@@ -210,8 +216,10 @@ pub struct PaymentNotificationRes {
     pub data: Option<DataNotification>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct DataNotification {
     pub route: String,
     pub source: String,
@@ -219,10 +227,12 @@ pub struct DataNotification {
 }
 
 /// Ответ инициатора платежа
-#[derive(Debug, Serialize, Deserialize, Default, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct InitPaymentRes {
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub terminal_key: TerminalKey,
     /// Requirements: <= 20 characters
     ///
@@ -243,8 +253,8 @@ pub struct InitPaymentRes {
     /// Requirements: <= 100 characters
     ///
     /// Ссылка на платежную форму. Параметр возвращается только для мерчантов, которые используют платежную форму Т-Банка.
-    #[serde(rename = "PaymentURL")]
-    #[schema(value_type = String)]
+    #[cfg_attr(feature = "serde", serde(rename = "PaymentURL"))]
+    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub payment_url: Option<Url>,
 }
 
@@ -256,8 +266,10 @@ pub struct InitPaymentRes {
 ///
 /// Если ключи или значения содержат в себе специальные символы, получившееся значение должно быть закодировано функцией urlencode.
 /// ВНИМАНИЕ: SDK не имплементирует LongPay
-#[derive(Serialize, Deserialize, Debug, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[derive(Debug)]
 pub struct Data {
     additional_properties: String,
     operation_initiator_type: OperationInitiatorType,
@@ -284,8 +296,10 @@ pub struct Data {
 /// O — одностадийная оплата;
 /// T — двухстадийная оплата.
 /// Если параметр передан, используется его значение, если нет — значение из настроек терминала.
-#[derive(Serialize, Default, Deserialize, Debug, ToSchema, Display, AsRefStr, EnumString)]
-#[serde(rename_all = "UPPERCASE")]
+#[derive(Debug, Default, Display, AsRefStr, EnumString)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "UPPERCASE"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum PayType {
     #[default]
@@ -304,8 +318,10 @@ impl_string_conversions_default!(PayType);
 /// ru — русский;
 /// en — английский.
 /// Если параметр не передан, форма откроется на русском языке.
-#[derive(Default, Serialize, Deserialize, Debug, ToSchema, Display, AsRefStr, EnumString)]
-#[serde(rename_all = "lowercase")]
+#[derive(Default, Debug, Display, AsRefStr, EnumString)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "lowercase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[strum(serialize_all = "lowercase")]
 pub enum Language {
     #[default]
@@ -316,8 +332,10 @@ pub enum Language {
 impl_string_conversions_default!(Language);
 
 /// JSON-объект с данными маркетплейса. Параметр обязательный для маркетплейсов.
-#[derive(Serialize, Deserialize, Debug, ToSchema)]
-#[serde(rename_all = "PascalCase")]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct Shop {
     /// Код магазина. Для параметра ShopСode нужно использовать значение параметра Submerchant_ID, который возвращается в ответе при регистрации магазинов через XML. Если XML не используется, передавать поле не нужно.
     shop_code: String,
@@ -371,10 +389,12 @@ impl Shop {
 /// D — MIT COF Delayed-Charge;
 /// N — MIT COF No-Show.
 /// Если передавать значения параметров, которые не соответствуют таблице, MAPI вернет ошибку 1126 — несопоставимые значения [rebillId] или [Recurrent] с переданным значением [OperationInitiatorType].
-#[derive(Serialize, Deserialize, Debug, ToSchema)]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct OperationInitiatorType;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "serde"))]
 mod test {
     use crate::{
         ErrorWrapper, InitPaymentReq, ItemFFD105, PaymentNotificationRes, PaymentStatus, Receipt,
