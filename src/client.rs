@@ -68,6 +68,7 @@ struct Credentials {
 ///
 /// Идентификатор терминала. Выдается мерчанту в Т‑Бизнес при заведении терминала.
 #[derive(Clone, Debug, Default)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct TerminalKey(String);
