@@ -850,7 +850,7 @@ impl_string_conversions_default!(Tax);
 /// - usn_income_outcome — упрощенная СН (доходы минус расходы). Налоговая автоматически определит АУСН по ИНН и пробьет чеки с нужной СНО;
 /// - esn — единый сельскохозяйственный налог;
 /// - patent — патентная СН.
-#[derive(Debug, Default, Display, AsRefStr, EnumString)]
+#[derive(Debug, Default, Display, AsRefStr, EnumString, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
