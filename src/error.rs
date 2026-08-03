@@ -10,7 +10,11 @@ pub enum Error {
     #[error("Configuration Error: {0}")]
     Config(String),
 
-    #[error("Reqwest Error: {0}")]
+    // `reqwest::Error`'s `Display` never includes the underlying cause (DNS
+    // failure, TLS handshake failure, connection reset, timeout, ...) —
+    // only its `Debug` impl does (kind/url/source fields). `{0:?}` is
+    // deliberate here, not a mistake.
+    #[error("Reqwest Error: {0:?}")]
     Server(#[from] reqwest::Error),
 
     #[error("API Error. {message:?}; {details:?}; {causes:?}")]

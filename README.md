@@ -7,6 +7,7 @@ Internet Acquiring for T-Business clients
 ### 1) Central mode (default)
 
 `Client::new()` reads:
+
 - `TBANK_ENV` (`Test` / `Production`)
 - `TERMINAL_ID`
 - `TBANK_PASSWORD`
