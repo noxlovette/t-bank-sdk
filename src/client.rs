@@ -14,6 +14,22 @@ use tracing::debug;
 pub const PRODUCTION_BASE: &str = "https://securepay.tinkoff.ru/v2";
 pub const TEST_BASE: &str = "https://rest-api-test.tinkoff.ru/v2";
 
+/// `securepay.tinkoff.ru` chains through the Russian state PKI
+/// ("Russian Trusted Root/Sub CA"), which isn't in the public Mozilla/OS
+/// trust programs, so it isn't trusted by default. The server only sends
+/// its leaf cert, not the intermediate, so both root and sub CA must be
+/// added as explicit trust anchors for the chain to validate.
+const RUSSIAN_TRUSTED_ROOT_CA_PEM: &[u8] = include_bytes!("certs/russian_trusted_root_ca.pem");
+const RUSSIAN_TRUSTED_SUB_CA_PEM: &[u8] = include_bytes!("certs/russian_trusted_sub_ca.pem");
+
+fn russian_trust_anchors() -> Result<[reqwest::Certificate; 2], Error> {
+    let root = reqwest::Certificate::from_pem(RUSSIAN_TRUSTED_ROOT_CA_PEM)
+        .map_err(|e| Error::Config(e.to_string()))?;
+    let sub = reqwest::Certificate::from_pem(RUSSIAN_TRUSTED_SUB_CA_PEM)
+        .map_err(|e| Error::Config(e.to_string()))?;
+    Ok([root, sub])
+}
+
 #[derive(Clone, Debug, Default)]
 pub enum Environment {
     Test,
@@ -155,12 +171,15 @@ impl Client {
             password,
         };
 
+        let [root_ca, sub_ca] = russian_trust_anchors()?;
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(20))
             .connect_timeout(Duration::from_secs(5))
             .user_agent(format!("tbank-rust-sdk/{version}"))
             .pool_idle_timeout(Some(Duration::from_secs(90)))
             .pool_max_idle_per_host(20)
+            .add_root_certificate(root_ca)
+            .add_root_certificate(sub_ca)
             .build()
             .map_err(|e| Error::Config(e.to_string()))?;
 
@@ -183,12 +202,15 @@ impl Client {
         debug!("Initializing T-Bank SDK external client v{version}");
 
         let env = Environment::from_env();
+        let [root_ca, sub_ca] = russian_trust_anchors()?;
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(20))
             .connect_timeout(Duration::from_secs(5))
             .user_agent(format!("tbank-rust-sdk/{version}"))
             .pool_idle_timeout(Some(Duration::from_secs(90)))
             .pool_max_idle_per_host(20)
+            .add_root_certificate(root_ca)
+            .add_root_certificate(sub_ca)
             .build()
             .map_err(|e| Error::Config(e.to_string()))?;
 
