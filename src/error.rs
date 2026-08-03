@@ -17,8 +17,9 @@ pub enum Error {
     #[error("Reqwest Error: {0:?}")]
     Server(#[from] reqwest::Error),
 
-    #[error("API Error. {message:?}; {details:?}; {causes:?}")]
+    #[error("API Error {error_code}. {message:?}; {details:?}; {causes:?}")]
     Api {
+        error_code: String,
         message: Option<String>,
         details: Option<String>,
         causes: Option<Vec<String>>,
@@ -69,13 +70,15 @@ impl<T> ErrorWrapper<T> {
 
         if error_code.0 == "0" {
             inner.ok_or_else(|| Error::Api {
+                error_code: error_code.0,
                 message: Some("error code 0 but got no body".to_string()),
                 causes,
                 details,
             })
         } else {
             Err(Error::Api {
-                message: Some(message.unwrap_or(error_code.0)),
+                error_code: error_code.0,
+                message,
                 causes,
                 details,
             })
