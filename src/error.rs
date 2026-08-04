@@ -1,9 +1,20 @@
+use std::ops::Deref;
+
+use crate::TBankApiError;
+
 pub type HandlerResult<T> = Result<ErrorWrapper<T>, Error>;
 
 #[derive(Debug, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
-pub struct ErrorCode(pub String);
+pub struct ErrorCode(String);
+
+impl Deref for ErrorCode {
+    type Target = String;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -17,9 +28,9 @@ pub enum Error {
     #[error("Reqwest Error: {0:?}")]
     Server(#[from] reqwest::Error),
 
-    #[error("API Error {error_code}. {message:?}; {details:?}; {causes:?}")]
+    #[error("API Error {}. {message:?}; {details:?}; {causes:?}", kind.code())]
     Api {
-        error_code: String,
+        kind: TBankApiError,
         message: Option<String>,
         details: Option<String>,
         causes: Option<Vec<String>>,
@@ -59,29 +70,29 @@ pub struct ErrorWrapper<T> {
 
 impl<T> ErrorWrapper<T> {
     pub fn unwrap(self) -> Result<T, Error> {
-        let Self {
-            inner,
-            message,
-            error_code,
-            causes,
-            details,
-            ..
-        } = self;
-
-        if error_code.0 == "0" {
-            inner.ok_or_else(|| Error::Api {
-                error_code: error_code.0,
-                message: Some("error code 0 but got no body".to_string()),
-                causes,
-                details,
-            })
+        if self.error_code.0 == "0" {
+            match self.inner {
+                Some(inner) => Ok(inner),
+                None => Err(Error::Api {
+                    kind: TBankApiError::from(self.error_code.0.as_str()),
+                    message: Some("error code 0 but got no body".to_string()),
+                    causes: self.causes,
+                    details: self.details,
+                }),
+            }
         } else {
-            Err(Error::Api {
-                error_code: error_code.0,
-                message,
-                causes,
-                details,
-            })
+            Err(self.into())
+        }
+    }
+}
+
+impl<T> From<ErrorWrapper<T>> for Error {
+    fn from(wrapper: ErrorWrapper<T>) -> Self {
+        Error::Api {
+            kind: TBankApiError::from(wrapper.error_code.0),
+            message: wrapper.message,
+            details: wrapper.details,
+            causes: wrapper.causes,
         }
     }
 }

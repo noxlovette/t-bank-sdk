@@ -1,3 +1,4 @@
+mod api_error;
 mod client;
 mod customer;
 mod error;
@@ -7,6 +8,7 @@ mod payment;
 mod receipt;
 mod token;
 
+pub use api_error::*;
 pub use client::*;
 pub use customer::*;
 pub use error::*;
