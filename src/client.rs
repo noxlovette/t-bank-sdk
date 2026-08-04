@@ -37,21 +37,28 @@ pub enum Environment {
     Production,
 }
 
-impl From<&str> for Environment {
-    fn from(s: &str) -> Self {
+impl TryFrom<&str> for Environment {
+    type Error = Error;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
         match s.to_uppercase().as_str() {
-            "PRODUCTION" => Self::Production,
-            "TEST" => Self::Test,
-            _ => Self::Test,
+            "PRODUCTION" => Ok(Self::Production),
+            "TEST" => Ok(Self::Test),
+            other => Err(Error::Config(format!(
+                "TBANK_ENV must be \"PRODUCTION\" or \"TEST\", got {other:?}"
+            ))),
         }
     }
 }
 
-impl From<String> for Environment {
-    fn from(s: String) -> Self {
-        Environment::from(s.as_str())
+impl TryFrom<String> for Environment {
+    type Error = Error;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        Environment::try_from(s.as_str())
     }
 }
+
 impl Environment {
     pub fn base_url(&self) -> &'static str {
         match self {
@@ -60,10 +67,19 @@ impl Environment {
         }
     }
 
-    fn from_env() -> Self {
-        std::env::var("TBANK_ENV")
-            .unwrap_or(String::from("Test"))
-            .into()
+    /// Reads `TBANK_ENV` and resolves it to an [`Environment`].
+    ///
+    /// An unset variable defaults to [`Environment::Test`] (safe for local/dev
+    /// use). A variable that *is* set to something other than `"PRODUCTION"`
+    /// or `"TEST"` is a hard error rather than silently falling back to
+    /// `Test` — a typo here must not silently redirect production traffic to
+    /// the test host.
+    fn from_env() -> Result<Self, Error> {
+        match std::env::var("TBANK_ENV") {
+            Ok(value) => Environment::try_from(value),
+            Err(std::env::VarError::NotPresent) => Ok(Self::Test),
+            Err(err) => Err(Error::Config(err.to_string())),
+        }
     }
 }
 
@@ -163,7 +179,7 @@ impl Client {
 
         debug!("Initializing T-Bank SDK client v{version}");
 
-        let env = Environment::from_env();
+        let env = Environment::from_env()?;
         let terminal_key = TerminalKey::from_env()?;
         let password = Password::from_env()?;
         let credentials = Credentials {
@@ -196,12 +212,21 @@ impl Client {
     ///
     /// В этом режиме пароль/терминал не хранятся в клиенте и должны
     /// передаваться в методы вида `*_with_credentials`.
+    ///
+    /// Reads the target environment from `TBANK_ENV`; use
+    /// [`Client::external_with_environment`] to pin it explicitly instead.
     pub async fn external() -> Result<Self, Error> {
+        Self::external_with_environment(Environment::from_env()?).await
+    }
+
+    /// Same as [`Client::external`], but takes the [`Environment`] directly
+    /// instead of reading `TBANK_ENV` — useful when the caller already knows
+    /// which host it wants to hit (e.g. tests that must pin production).
+    pub async fn external_with_environment(env: Environment) -> Result<Self, Error> {
         let version = env!("CARGO_PKG_VERSION");
 
         debug!("Initializing T-Bank SDK external client v{version}");
 
-        let env = Environment::from_env();
         let [root_ca, sub_ca] = russian_trust_anchors()?;
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(20))
