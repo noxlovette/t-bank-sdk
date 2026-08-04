@@ -3,6 +3,36 @@ use chrono::{DateTime, Duration, Utc};
 use strum::{AsRefStr, Display, EnumString};
 use url::Url;
 
+/// T-Bank expects `RedirectDueDate` as `YYYY-MM-DDTHH24:MI:SS+GMT`
+/// (e.g. `2016-08-31T12:28:00+03:00`) — whole seconds, explicit numeric
+/// offset, no fractional seconds and no `Z` suffix. `chrono`'s default
+/// `DateTime<Utc>` serialization produces microsecond-precision RFC 3339
+/// with a `Z` suffix, which T-Bank's `Init` endpoint doesn't accept: it
+/// fails every request carrying this field with a generic `9999` "internal
+/// error" instead of a parse error, so the mismatch is easy to miss.
+///
+/// Also used directly by `token.rs`'s token derivation for this field —
+/// the signed token must be computed from the exact same string that ends
+/// up on the wire, not from `serde_json`'s default `DateTime<Utc>` format,
+/// or the request body and its signature disagree and every request fails.
+pub(crate) fn format_redirect_due_date(dt: &DateTime<Utc>) -> String {
+    dt.format("%Y-%m-%dT%H:%M:%S%:z").to_string()
+}
+
+#[cfg(feature = "serde")]
+fn serialize_redirect_due_date<S>(
+    value: &Option<DateTime<Utc>>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    match value {
+        Some(dt) => serializer.serialize_str(&format_redirect_due_date(dt)),
+        None => serializer.serialize_none(),
+    }
+}
+
 /// Запрос для инициации платежа
 #[derive(Debug, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
@@ -78,6 +108,10 @@ pub struct InitPaymentReq {
     /// больше нуля — оно будет установлено в качестве срока жизни ссылки или динамического QR-кода;
     /// меньше нуля — устанавливается значение по умолчанию: 1440 мин. (1 сутки).
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(serialize_with = "serialize_redirect_due_date")
+    )]
     pub redirect_due_date: Option<DateTime<Utc>>,
     #[cfg(feature = "serde")]
     #[serde(rename = "DATA")]
@@ -440,6 +474,68 @@ mod test {
         assert_eq!(value["Shops"][0]["ShopCode"], "submerchant-1");
         assert_eq!(value["Shops"][0]["Amount"], 1000);
         assert_eq!(value["Shops"][0]["Name"], "Shop 1");
+    }
+
+    #[test]
+    fn redirect_due_date_serializes_in_tbank_format() {
+        use chrono::{TimeZone, Utc};
+
+        // 2026-08-31T12:28:00Z — no fractional seconds, explicit +00:00
+        // offset, no bare `Z`. T-Bank's docs specify
+        // `YYYY-MM-DDTHH24:MI:SS+GMT` (e.g. `2016-08-31T12:28:00+03:00`);
+        // chrono's default `DateTime<Utc>` Serialize impl produces
+        // microsecond precision with a `Z` suffix instead, which T-Bank's
+        // `Init` endpoint rejects with a generic `9999` error.
+        let dt = Utc.with_ymd_and_hms(2026, 8, 31, 12, 28, 0).unwrap();
+        let payload = InitPaymentReq {
+            redirect_due_date: Some(dt),
+            ..InitPaymentReq::new(&TerminalKey::default(), 1000, "32451")
+        };
+
+        let value = serde_json::to_value(&payload).unwrap();
+
+        assert_eq!(value["RedirectDueDate"], "2026-08-31T12:28:00+00:00");
+    }
+
+    #[test]
+    fn redirect_due_date_token_matches_wire_format() {
+        use crate::{DeriveToken, Password};
+        use chrono::{TimeZone, Utc};
+        use sha2::{Digest, Sha256};
+        use std::collections::BTreeMap;
+
+        let dt = Utc.with_ymd_and_hms(2026, 8, 31, 12, 28, 0).unwrap();
+        let payload = InitPaymentReq {
+            redirect_due_date: Some(dt),
+            ..InitPaymentReq::new(&TerminalKey::default(), 1000, "32451")
+        };
+        let password = Password::new("pw").unwrap();
+
+        // The signed token must be derived from the exact string that ends
+        // up on the wire — if `token.rs` and the `Serialize` impl disagree
+        // on how to format this field, T-Bank rejects the request as
+        // improperly signed (ErrorCode 204) even though every other field
+        // matches. Rebuild the expected signature independently, straight
+        // from the wire JSON, rather than depending on `token.rs`'s own
+        // field-insertion order.
+        let wire = serde_json::to_value(&payload).unwrap();
+        let mut fields = BTreeMap::new();
+        fields.insert("Amount", wire["Amount"].to_string());
+        fields.insert("OrderId", wire["OrderId"].as_str().unwrap().to_string());
+        fields.insert("Password", "pw".to_string());
+        fields.insert(
+            "RedirectDueDate",
+            wire["RedirectDueDate"].as_str().unwrap().to_string(),
+        );
+        fields.insert(
+            "TerminalKey",
+            wire["TerminalKey"].as_str().unwrap().to_string(),
+        );
+        let joined: String = fields.into_values().collect();
+        let expected_token = format!("{:x}", Sha256::digest(joined.as_bytes()));
+
+        let token = payload.create_token(&password);
+        assert_eq!(serde_json::to_value(&token).unwrap(), expected_token);
     }
 
     #[test]

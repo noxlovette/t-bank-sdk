@@ -104,7 +104,12 @@ impl DeriveToken for InitPaymentReq {
         insert_opt(&mut fields, "NotificationUrl", &self.notification_url);
         insert_opt(&mut fields, "SuccessUrl", &self.success_url);
         insert_opt(&mut fields, "FailUrl", &self.fail_url);
-        insert_opt(&mut fields, "RedirectDueDate", &self.redirect_due_date);
+        if let Some(rdd) = &self.redirect_due_date {
+            fields.insert(
+                "RedirectDueDate".to_string(),
+                crate::payment::format_redirect_due_date(rdd),
+            );
+        }
 
         build_token(fields)
     }
