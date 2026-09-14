@@ -84,6 +84,44 @@ impl<T> ErrorWrapper<T> {
             Err(self.into())
         }
     }
+
+    /// `Success` — non-consuming, unlike [`Self::unwrap`].
+    pub fn success(&self) -> bool {
+        self.success
+    }
+
+    /// `ErrorCode` — non-consuming, unlike [`Self::unwrap`].
+    pub fn error_code(&self) -> &str {
+        &self.error_code
+    }
+
+    /// `Message`, if T-Bank sent one.
+    pub fn message(&self) -> Option<&str> {
+        self.message.as_deref()
+    }
+
+    /// The typed payload, present whenever T-Bank included one —
+    /// regardless of `error_code`/`success`.
+    ///
+    /// Unlike [`Self::unwrap`] (meant for *outbound* request responses,
+    /// where a non-`"0"` error code means the call genuinely failed and
+    /// carries no usable payload), an inbound webhook notification
+    /// legitimately carries a non-`"0"` `ErrorCode`/`Success: false`
+    /// alongside a fully-populated body — e.g. a declined payment still
+    /// reports its `Status`/`PaymentId`/etc. Callers processing
+    /// notifications should read the payload through this accessor (or
+    /// [`Self::into_inner`]), not `unwrap()`, which would incorrectly
+    /// discard it.
+    pub fn inner(&self) -> Option<&T> {
+        self.inner.as_ref()
+    }
+
+    /// Owned version of [`Self::inner`], for a caller that no longer needs
+    /// the wrapper (e.g. after already reading [`Self::success`]/
+    /// [`Self::error_code`]/[`Self::verify_token`]).
+    pub fn into_inner(self) -> Option<T> {
+        self.inner
+    }
 }
 
 impl<T> From<ErrorWrapper<T>> for Error {
