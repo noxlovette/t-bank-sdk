@@ -2,6 +2,16 @@
 name = "t-bank-sdk"
 version = "0.3.0"
 edition = "2024"
+authors = ["Danila Volkov <noxlovette@proton.me>"]
+description = "Async Rust SDK for T-Bank's (T-Business) Internet Acquiring API"
+license = "MIT"
+repository = "https://github.com/noxlovette/t-bank-sdk"
+homepage = "https://github.com/noxlovette/t-bank-sdk"
+documentation = "https://docs.rs/t-bank-sdk"
+readme = "README.md"
+keywords = ["tbank", "acquiring", "payments", "sdk", "tinkoff"]
+categories = ["api-bindings", "finance"]
+exclude = [".github/"]
 
 [features]
 serde = ["dep:serde", "dep:serde_json", "chrono/serde", "url/serde"]
