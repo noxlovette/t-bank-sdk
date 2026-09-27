@@ -1,13 +1,18 @@
+use crate::Password;
+#[cfg(feature = "serde")]
 use crate::{
     AddCardReq, AddCustomerReq, CancelPaymentReq, ChargePaymentReq, ConfirmPaymentReq,
     ErrorWrapper, GetCardListReq, GetCustomerReq, GetStateReq, InitPaymentReq,
-    PaymentNotificationRes, Password, RemoveCardReq, RemoveCustomerReq, ResendNotificationReq,
+    PaymentNotificationRes, RemoveCardReq, RemoveCustomerReq, ResendNotificationReq,
     SendClosingReceiptReq,
 };
 #[cfg(feature = "serde")]
 use serde::Serialize;
+#[cfg(feature = "serde")]
 use sha2::{Digest, Sha256};
+#[cfg(feature = "serde")]
 use std::collections::BTreeMap;
+use std::ops::Deref;
 
 /// Подпись запроса. [Как сформировать.](https://developer.tbank.ru/eacq/intro/developer/token)
 #[derive(Debug)]
@@ -15,12 +20,50 @@ use std::collections::BTreeMap;
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct Token(String);
 
-impl Token {
-    fn from_string(s: String) -> Self {
-        Self(s)
+#[cfg(feature = "serde")]
+pub struct TokenBuilder(BTreeMap<String, String>);
+
+#[cfg(feature = "serde")]
+impl TokenBuilder {
+    fn new() -> Self {
+        Self(BTreeMap::new())
     }
 
+    /// inserts an entry into the token builder
+    fn insert<T: Serialize>(&mut self, key: &str, value: &T) {
+        self.0.insert(key.to_string(), serialize_token_value(value));
+    }
+
+    /// inserts value if present
+    fn insert_opt<T: Serialize>(&mut self, key: &str, value: &Option<T>) {
+        if let Some(v) = value {
+            self.0.insert(key.to_string(), serialize_token_value(v));
+        }
+    }
+}
+
+#[cfg(feature = "serde")]
+impl From<TokenBuilder> for Token {
+    fn from(value: TokenBuilder) -> Self {
+        let joined = value.0.into_values().collect::<String>();
+        hex::encode(Sha256::digest(joined.as_bytes())).into()
+    }
+}
+
+impl From<String> for Token {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+impl Token {
     pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl Deref for Token {
+    type Target = String;
+    fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
@@ -32,24 +75,27 @@ impl std::fmt::Display for Token {
 }
 
 /// This wrapper will generate a token for given payload
-#[derive(Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+///
+/// It stores the payload + the token that that payload will generate
+#[cfg(feature = "serde")]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "PascalCase")]
 pub struct TokenWrapper<P>
 where
     P: DeriveToken,
 {
     token: Token,
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     payload: P,
 }
 
+#[cfg(feature = "serde")]
 impl<P> TokenWrapper<P>
 where
     P: DeriveToken,
 {
     pub fn from_payload(payload: P, password: &Password) -> Self {
-        let token = payload.create_token(password);
+        let token = payload.derive_token(password);
         Self { payload, token }
     }
 }
@@ -57,27 +103,7 @@ where
 /// Creates a request token according to T-Bank's signing rules.
 pub trait DeriveToken {
     /// Builds a SHA-256 token from root-level request fields and the provided password.
-    fn create_token(&self, password: &Password) -> Token;
-}
-
-// ─── helpers ─────────────────────────────────────────────────────────────────
-
-fn build_token(fields: BTreeMap<String, String>) -> Token {
-    let joined = fields.into_values().collect::<String>();
-    let hash = Sha256::digest(joined.as_bytes());
-    Token::from_string(format!("{hash:x}"))
-}
-
-#[cfg(feature = "serde")]
-fn insert<T: Serialize>(map: &mut BTreeMap<String, String>, key: &str, value: &T) {
-    map.insert(key.to_string(), serialize_token_value(value));
-}
-
-#[cfg(feature = "serde")]
-fn insert_opt<T: Serialize>(map: &mut BTreeMap<String, String>, key: &str, value: &Option<T>) {
-    if let Some(v) = value {
-        map.insert(key.to_string(), serialize_token_value(v));
-    }
+    fn derive_token(&self, password: &Password) -> Token;
 }
 
 #[cfg(feature = "serde")]
@@ -96,46 +122,27 @@ where
     }
 }
 
-/// Byte-length- and content-independent-time comparison — avoids pulling in
-/// a whole crate for one primitive. Not constant-*compiler-optimization*
-/// proof the way a dedicated crate audited against that would be, but
-/// sufficient for comparing a locally-computed hash against an
-/// attacker-supplied one over a network round-trip, where the timing
-/// signal this defends against is already drowned out by request jitter.
-fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
-    if a.len() != b.len() {
-        return false;
-    }
-    a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
-}
-
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 #[cfg(feature = "serde")]
 impl DeriveToken for InitPaymentReq {
-    fn create_token(&self, password: &Password) -> Token {
-        let mut fields = BTreeMap::new();
-        insert(&mut fields, "Amount", &self.amount);
-        insert(&mut fields, "OrderId", &self.order_id);
-        fields.insert("Password".to_string(), password.into());
-        insert(&mut fields, "TerminalKey", &self.terminal_key);
+    fn derive_token(&self, password: &Password) -> Token {
+        let mut builder = TokenBuilder::new();
+        builder.insert("Amount", &self.amount);
+        builder.insert("OrderId", &self.order_id);
+        builder.insert("Password", password);
+        builder.insert("TerminalKey", &self.terminal_key);
+        builder.insert_opt("Description", &self.description);
+        builder.insert_opt("CustomerKey", &self.customer_key);
+        builder.insert_opt("Recurrent", &self.recurrent);
+        builder.insert_opt("PayType", &self.pay_type);
+        builder.insert_opt("Language", &self.language);
+        builder.insert_opt("NotificationUrl", &self.notification_url);
+        builder.insert_opt("SuccessUrl", &self.success_url);
+        builder.insert_opt("FailUrl", &self.fail_url);
+        builder.insert_opt("RedirectDueDate", &self.redirect_due_date);
 
-        insert_opt(&mut fields, "Description", &self.description);
-        insert_opt(&mut fields, "CustomerKey", &self.customer_key);
-        insert_opt(&mut fields, "Recurrent", &self.recurrent);
-        insert_opt(&mut fields, "PayType", &self.pay_type);
-        insert_opt(&mut fields, "Language", &self.language);
-        insert_opt(&mut fields, "NotificationUrl", &self.notification_url);
-        insert_opt(&mut fields, "SuccessUrl", &self.success_url);
-        insert_opt(&mut fields, "FailUrl", &self.fail_url);
-        if let Some(rdd) = &self.redirect_due_date {
-            fields.insert(
-                "RedirectDueDate".to_string(),
-                crate::payment::format_redirect_due_date(rdd),
-            );
-        }
-
-        build_token(fields)
+        builder.into()
     }
 }
 
@@ -143,13 +150,14 @@ impl DeriveToken for InitPaymentReq {
 
 #[cfg(feature = "serde")]
 impl DeriveToken for ConfirmPaymentReq {
-    fn create_token(&self, password: &Password) -> Token {
-        let mut fields = BTreeMap::new();
-        insert(&mut fields, "PaymentId", &self.payment_id);
-        fields.insert("Password".to_string(), password.into());
-        insert(&mut fields, "TerminalKey", &self.terminal_key);
-        insert_opt(&mut fields, "Amount", &self.amount);
-        build_token(fields)
+    fn derive_token(&self, password: &Password) -> Token {
+        let mut builder = TokenBuilder::new();
+        builder.insert("PaymentId", &self.payment_id);
+        builder.insert("Password", password);
+        builder.insert("TerminalKey", &self.terminal_key);
+        builder.insert_opt("Amount", &self.amount);
+
+        builder.into()
     }
 }
 
@@ -157,14 +165,15 @@ impl DeriveToken for ConfirmPaymentReq {
 
 #[cfg(feature = "serde")]
 impl DeriveToken for CancelPaymentReq {
-    fn create_token(&self, password: &Password) -> Token {
-        let mut fields = BTreeMap::new();
-        insert(&mut fields, "PaymentId", &self.payment_id);
-        fields.insert("Password".to_string(), password.into());
-        insert(&mut fields, "TerminalKey", &self.terminal_key);
-        insert_opt(&mut fields, "Amount", &self.amount);
-        insert_opt(&mut fields, "ExternalRequestId", &self.external_request_id);
-        build_token(fields)
+    fn derive_token(&self, password: &Password) -> Token {
+        let mut builder = TokenBuilder::new();
+        builder.insert("PaymentId", &self.payment_id);
+        builder.insert("Password", password);
+        builder.insert("TerminalKey", &self.terminal_key);
+        builder.insert_opt("Amount", &self.amount);
+        builder.insert_opt("ExternalRequestId", &self.external_request_id);
+
+        builder.into()
     }
 }
 
@@ -172,13 +181,13 @@ impl DeriveToken for CancelPaymentReq {
 
 #[cfg(feature = "serde")]
 impl DeriveToken for ChargePaymentReq {
-    fn create_token(&self, password: &Password) -> Token {
-        let mut fields = BTreeMap::new();
-        insert(&mut fields, "PaymentId", &self.payment_id);
-        fields.insert("Password".to_string(), password.into());
-        insert(&mut fields, "RebillId", &self.rebill_id);
-        insert(&mut fields, "TerminalKey", &self.terminal_key);
-        build_token(fields)
+    fn derive_token(&self, password: &Password) -> Token {
+        let mut builder = TokenBuilder::new();
+        builder.insert("PaymentId", &self.payment_id);
+        builder.insert("Password", password);
+        builder.insert("RebillId", &self.rebill_id);
+        builder.insert("TerminalKey", &self.terminal_key);
+        builder.into()
     }
 }
 
@@ -208,7 +217,7 @@ impl ErrorWrapper<PaymentNotificationRes> {
             return false;
         };
 
-        constant_time_eq(
+        constant_time_eq::constant_time_eq(
             computed.as_str().as_bytes(),
             received.to_lowercase().as_bytes(),
         )
@@ -222,21 +231,21 @@ impl ErrorWrapper<PaymentNotificationRes> {
     pub fn compute_token(&self, password: &Password) -> Option<Token> {
         let inner = self.inner()?;
 
-        let mut fields = BTreeMap::new();
-        insert(&mut fields, "Amount", &inner.amount);
-        fields.insert("ErrorCode".to_string(), self.error_code().to_string());
-        insert(&mut fields, "OrderId", &inner.order_id);
-        fields.insert("Password".to_string(), password.into());
-        insert(&mut fields, "PaymentId", &inner.payment_id);
-        insert(&mut fields, "Status", &inner.status);
-        fields.insert("Success".to_string(), self.success().to_string());
-        insert(&mut fields, "TerminalKey", &inner.terminal_key);
-        insert_opt(&mut fields, "RebillId", &inner.rebill_id);
-        insert_opt(&mut fields, "CardId", &inner.card_id);
-        insert_opt(&mut fields, "Pan", &inner.pan);
-        insert_opt(&mut fields, "ExpDate", &inner.exp_date);
+        let mut builder = TokenBuilder::new();
+        builder.insert("Amount", &inner.amount);
+        builder.insert("ErrorCode", &self.error_code());
+        builder.insert("OrderId", &inner.order_id);
+        builder.insert("Password", password);
+        builder.insert("PaymentId", &inner.payment_id);
+        builder.insert("Status", &inner.status);
+        builder.insert("Success", &self.success());
+        builder.insert("TerminalKey", &inner.terminal_key);
+        builder.insert_opt("RebillId", &inner.rebill_id);
+        builder.insert_opt("CardId", &inner.card_id);
+        builder.insert_opt("Pan", &inner.pan);
+        builder.insert_opt("ExpDate", &inner.exp_date);
 
-        Some(build_token(fields))
+        Some(builder.into())
     }
 }
 
@@ -244,12 +253,13 @@ impl ErrorWrapper<PaymentNotificationRes> {
 
 #[cfg(feature = "serde")]
 impl DeriveToken for GetStateReq {
-    fn create_token(&self, password: &Password) -> Token {
-        let mut fields = BTreeMap::new();
-        insert(&mut fields, "PaymentId", &self.payment_id);
-        fields.insert("Password".to_string(), password.into());
-        insert(&mut fields, "TerminalKey", &self.terminal_key);
-        build_token(fields)
+    fn derive_token(&self, password: &Password) -> Token {
+        let mut builder = TokenBuilder::new();
+        builder.insert("PaymentId", &self.payment_id);
+        builder.insert("Password", password);
+        builder.insert("TerminalKey", &self.terminal_key);
+
+        builder.into()
     }
 }
 
@@ -257,12 +267,13 @@ impl DeriveToken for GetStateReq {
 
 #[cfg(feature = "serde")]
 impl DeriveToken for SendClosingReceiptReq {
-    fn create_token(&self, password: &Password) -> Token {
-        let mut fields = BTreeMap::new();
-        insert(&mut fields, "PaymentId", &self.payment_id);
-        fields.insert("Password".to_string(), password.into());
-        insert(&mut fields, "TerminalKey", &self.terminal_key);
-        build_token(fields)
+    fn derive_token(&self, password: &Password) -> Token {
+        let mut builder = TokenBuilder::new();
+        builder.insert("PaymentId", &self.payment_id);
+        builder.insert("Password", password);
+        builder.insert("TerminalKey", &self.terminal_key);
+
+        builder.into()
     }
 }
 
@@ -270,11 +281,12 @@ impl DeriveToken for SendClosingReceiptReq {
 
 #[cfg(feature = "serde")]
 impl DeriveToken for ResendNotificationReq {
-    fn create_token(&self, password: &Password) -> Token {
-        let mut fields = BTreeMap::new();
-        fields.insert("Password".to_string(), password.into());
-        insert(&mut fields, "TerminalKey", &self.terminal_key);
-        build_token(fields)
+    fn derive_token(&self, password: &Password) -> Token {
+        let mut builder = TokenBuilder::new();
+        builder.insert("Password", password);
+        builder.insert("TerminalKey", &self.terminal_key);
+
+        builder.into()
     }
 }
 
@@ -282,14 +294,14 @@ impl DeriveToken for ResendNotificationReq {
 
 #[cfg(feature = "serde")]
 impl DeriveToken for AddCustomerReq {
-    fn create_token(&self, password: &Password) -> Token {
-        let mut fields = BTreeMap::new();
-        insert(&mut fields, "CustomerKey", &self.customer_key);
-        fields.insert("Password".to_string(), password.into());
-        insert(&mut fields, "TerminalKey", &self.terminal_key);
-        insert_opt(&mut fields, "Email", &self.email);
-        insert_opt(&mut fields, "Phone", &self.phone);
-        build_token(fields)
+    fn derive_token(&self, password: &Password) -> Token {
+        let mut builder = TokenBuilder::new();
+        builder.insert("CustomerKey", &self.customer_key);
+        builder.insert("Password", password);
+        builder.insert("TerminalKey", &self.terminal_key);
+        builder.insert_opt("Email", &self.email);
+        builder.insert_opt("Phone", &self.phone);
+        builder.into()
     }
 }
 
@@ -297,12 +309,12 @@ impl DeriveToken for AddCustomerReq {
 
 #[cfg(feature = "serde")]
 impl DeriveToken for GetCustomerReq {
-    fn create_token(&self, password: &Password) -> Token {
-        let mut fields = BTreeMap::new();
-        insert(&mut fields, "CustomerKey", &self.customer_key);
-        fields.insert("Password".to_string(), password.into());
-        insert(&mut fields, "TerminalKey", &self.terminal_key);
-        build_token(fields)
+    fn derive_token(&self, password: &Password) -> Token {
+        let mut builder = TokenBuilder::new();
+        builder.insert("CustomerKey", &self.customer_key);
+        builder.insert("Password", password);
+        builder.insert("TerminalKey", &self.terminal_key);
+        builder.into()
     }
 }
 
@@ -310,12 +322,12 @@ impl DeriveToken for GetCustomerReq {
 
 #[cfg(feature = "serde")]
 impl DeriveToken for RemoveCustomerReq {
-    fn create_token(&self, password: &Password) -> Token {
-        let mut fields = BTreeMap::new();
-        insert(&mut fields, "CustomerKey", &self.customer_key);
-        fields.insert("Password".to_string(), password.into());
-        insert(&mut fields, "TerminalKey", &self.terminal_key);
-        build_token(fields)
+    fn derive_token(&self, password: &Password) -> Token {
+        let mut builder = TokenBuilder::new();
+        builder.insert("CustomerKey", &self.customer_key);
+        builder.insert("Password", password);
+        builder.insert("TerminalKey", &self.terminal_key);
+        builder.into()
     }
 }
 
@@ -323,13 +335,13 @@ impl DeriveToken for RemoveCustomerReq {
 
 #[cfg(feature = "serde")]
 impl DeriveToken for AddCardReq {
-    fn create_token(&self, password: &Password) -> Token {
-        let mut fields = BTreeMap::new();
-        insert(&mut fields, "CustomerKey", &self.customer_key);
-        fields.insert("Password".to_string(), password.into());
-        insert(&mut fields, "TerminalKey", &self.terminal_key);
-        insert_opt(&mut fields, "CheckType", &self.check_type);
-        build_token(fields)
+    fn derive_token(&self, password: &Password) -> Token {
+        let mut builder = TokenBuilder::new();
+        builder.insert("CustomerKey", &self.customer_key);
+        builder.insert("Password", password);
+        builder.insert("TerminalKey", &self.terminal_key);
+        builder.insert_opt("CheckType", &self.check_type);
+        builder.into()
     }
 }
 
@@ -337,12 +349,12 @@ impl DeriveToken for AddCardReq {
 
 #[cfg(feature = "serde")]
 impl DeriveToken for GetCardListReq {
-    fn create_token(&self, password: &Password) -> Token {
-        let mut fields = BTreeMap::new();
-        insert(&mut fields, "CustomerKey", &self.customer_key);
-        fields.insert("Password".to_string(), password.into());
-        insert(&mut fields, "TerminalKey", &self.terminal_key);
-        build_token(fields)
+    fn derive_token(&self, password: &Password) -> Token {
+        let mut builder = TokenBuilder::new();
+        builder.insert("CustomerKey", &self.customer_key);
+        builder.insert("Password", password);
+        builder.insert("TerminalKey", &self.terminal_key);
+        builder.into()
     }
 }
 
@@ -350,31 +362,19 @@ impl DeriveToken for GetCardListReq {
 
 #[cfg(feature = "serde")]
 impl DeriveToken for RemoveCardReq {
-    fn create_token(&self, password: &Password) -> Token {
-        let mut fields = BTreeMap::new();
-        insert(&mut fields, "CardId", &self.card_id);
-        insert(&mut fields, "CustomerKey", &self.customer_key);
-        fields.insert("Password".to_string(), password.into());
-        insert(&mut fields, "TerminalKey", &self.terminal_key);
-        build_token(fields)
+    fn derive_token(&self, password: &Password) -> Token {
+        let mut builder = TokenBuilder::new();
+        builder.insert("CardId", &self.card_id);
+        builder.insert("CustomerKey", &self.customer_key);
+        builder.insert("Password", password);
+        builder.insert("TerminalKey", &self.terminal_key);
+        builder.into()
     }
 }
 
 #[cfg(all(test, feature = "serde"))]
 mod test {
-    use super::constant_time_eq;
-    use crate::{ErrorWrapper, PaymentNotificationRes, Password};
-
-    #[test]
-    fn constant_time_eq_matches_equal_slices() {
-        assert!(constant_time_eq(b"abc", b"abc"));
-    }
-
-    #[test]
-    fn constant_time_eq_rejects_different_slices() {
-        assert!(!constant_time_eq(b"abc", b"abd"));
-        assert!(!constant_time_eq(b"abc", b"ab"));
-    }
+    use crate::{ErrorWrapper, Password, PaymentNotificationRes};
 
     /// Real payload + real `Token`, straight from
     /// `payment.rs`'s `payment_notification_deserializes_real_webhook_payload`

@@ -1,14 +1,18 @@
+use crate::Error;
+#[cfg(feature = "serde")]
 use crate::{
     AddCardReq, AddCardRes, AddCustomerReq, AddCustomerRes, CancelPaymentReq, CancelPaymentRes,
     CardInfo, ChargePaymentReq, ChargePaymentRes, ConfirmPaymentReq, ConfirmPaymentRes,
-    DeriveToken, Error, GetCardListReq, GetCustomerReq, GetCustomerRes, GetStateReq, GetStateRes,
+    DeriveToken, GetCardListReq, GetCustomerReq, GetCustomerRes, GetStateReq, GetStateRes,
     HandlerResult, InitPaymentReq, InitPaymentRes, RemoveCardReq, RemoveCardRes, RemoveCustomerReq,
     RemoveCustomerRes, ResendNotificationReq, ResendNotificationRes, SendClosingReceiptReq,
     SendClosingReceiptRes, TokenWrapper,
 };
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-use std::{ops::Deref, time::Duration};
+use std::ops::Deref;
+#[cfg(feature = "serde")]
+use std::time::Duration;
 use tracing::debug;
 
 pub const PRODUCTION_BASE: &str = "https://securepay.tinkoff.ru/v2";
@@ -19,15 +23,34 @@ pub const TEST_BASE: &str = "https://rest-api-test.tinkoff.ru/v2";
 /// trust programs, so it isn't trusted by default. The server only sends
 /// its leaf cert, not the intermediate, so both root and sub CA must be
 /// added as explicit trust anchors for the chain to validate.
+#[cfg(feature = "serde")]
 const RUSSIAN_TRUSTED_ROOT_CA_PEM: &[u8] = include_bytes!("certs/russian_trusted_root_ca.pem");
+#[cfg(feature = "serde")]
 const RUSSIAN_TRUSTED_SUB_CA_PEM: &[u8] = include_bytes!("certs/russian_trusted_sub_ca.pem");
 
+#[cfg(feature = "serde")]
 fn russian_trust_anchors() -> Result<[reqwest::Certificate; 2], Error> {
     let root = reqwest::Certificate::from_pem(RUSSIAN_TRUSTED_ROOT_CA_PEM)
         .map_err(|e| Error::Config(e.to_string()))?;
     let sub = reqwest::Certificate::from_pem(RUSSIAN_TRUSTED_SUB_CA_PEM)
         .map_err(|e| Error::Config(e.to_string()))?;
     Ok([root, sub])
+}
+
+/// HTTP client preconfigured with timeouts, pooling and the Russian trust anchors.
+#[cfg(feature = "serde")]
+fn build_http_client(version: &str) -> Result<reqwest::Client, Error> {
+    let [root_ca, sub_ca] = russian_trust_anchors()?;
+    reqwest::Client::builder()
+        .timeout(Duration::from_secs(20))
+        .connect_timeout(Duration::from_secs(5))
+        .user_agent(format!("tbank-rust-sdk/{version}"))
+        .pool_idle_timeout(Some(Duration::from_secs(90)))
+        .pool_max_idle_per_host(20)
+        .add_root_certificate(root_ca)
+        .add_root_certificate(sub_ca)
+        .build()
+        .map_err(|e| Error::Config(e.to_string()))
 }
 
 #[derive(Clone, Debug, Default)]
@@ -85,6 +108,7 @@ impl Environment {
 
 #[derive(Debug, Clone)]
 pub struct Client {
+    #[cfg(feature = "serde")]
     pub(crate) client: reqwest::Client,
     env: Environment,
     credentials: Option<Credentials>,
@@ -140,6 +164,7 @@ impl Deref for Password {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Password(String);
 
 impl Password {
@@ -187,22 +212,9 @@ impl Client {
             password,
         };
 
-        let [root_ca, sub_ca] = russian_trust_anchors()?;
-        let client = reqwest::Client::builder()
-            .timeout(Duration::from_secs(20))
-            .connect_timeout(Duration::from_secs(5))
-            .user_agent(format!("tbank-rust-sdk/{version}"))
-            .pool_idle_timeout(Some(Duration::from_secs(90)))
-            .pool_max_idle_per_host(20)
-            .add_root_certificate(root_ca)
-            .add_root_certificate(sub_ca)
-            .build()
-            .map_err(|e| Error::Config(e.to_string()))?;
-
-        debug!("Reqwest client constructed with standard timeouts");
-
         Ok(Self {
-            client,
+            #[cfg(feature = "serde")]
+            client: build_http_client(version)?,
             env,
             credentials: Some(credentials),
         })
@@ -227,20 +239,9 @@ impl Client {
 
         debug!("Initializing T-Bank SDK external client v{version}");
 
-        let [root_ca, sub_ca] = russian_trust_anchors()?;
-        let client = reqwest::Client::builder()
-            .timeout(Duration::from_secs(20))
-            .connect_timeout(Duration::from_secs(5))
-            .user_agent(format!("tbank-rust-sdk/{version}"))
-            .pool_idle_timeout(Some(Duration::from_secs(90)))
-            .pool_max_idle_per_host(20)
-            .add_root_certificate(root_ca)
-            .add_root_certificate(sub_ca)
-            .build()
-            .map_err(|e| Error::Config(e.to_string()))?;
-
         Ok(Self {
-            client,
+            #[cfg(feature = "serde")]
+            client: build_http_client(version)?,
             env,
             credentials: None,
         })
@@ -274,7 +275,10 @@ impl Client {
     pub fn url(&self, path: &str) -> String {
         format!("{}/{}", self.env.base_url(), path.trim_start_matches('/'))
     }
+}
 
+#[cfg(feature = "serde")]
+impl Client {
     fn credentials_required(&self) -> Result<&Credentials, Error> {
         self.credentials.as_ref().ok_or_else(|| {
             Error::Config(
@@ -283,10 +287,7 @@ impl Client {
             )
         })
     }
-}
 
-#[cfg(feature = "serde")]
-impl Client {
     /// Generic signed POST → JSON response.
     async fn post_json<Req, Res>(
         &self,

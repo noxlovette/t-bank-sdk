@@ -1,6 +1,6 @@
 [package]
 name = "t-bank-sdk"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 authors = ["Danila Volkov <noxlovette@proton.me>"]
 description = "Async Rust SDK for T-Bank's (T-Business) Internet Acquiring API"
@@ -10,7 +10,7 @@ homepage = "https://github.com/noxlovette/t-bank-sdk"
 documentation = "https://docs.rs/t-bank-sdk"
 readme = "README.md"
 keywords = ["tbank", "acquiring", "payments", "sdk", "tinkoff"]
-categories = ["api-bindings", "finance"]
+categories = ["api-bindings", "finance", "web-programming::http-client"]
 exclude = [".github/"]
 
 [features]
@@ -23,12 +23,14 @@ reqwest = { version = "0.13", features = ["json"] }
 serde = { version = "1", features = ["derive"], optional = true }
 serde_json = { version = "1", optional = true }
 chrono = { version = "0.4" }
-sha2 = "0.10"
+sha2 = "0.11"
 url = { version = "2.5.8" }
 tracing = "0.1.44"
 thiserror = "2"
 strum = { version = "0.28.0", features = ["derive"] }
-utoipa = { version = "5.5.0", features = ["chrono"], optional = true }
+utoipa = { version = "6", features = ["chrono"], optional = true }
+hex = "0.4.3"
+constant_time_eq = "0.6.0"
 
 [dev-dependencies]
 axum = { version = "0.8.9", features = ["macros"] }
