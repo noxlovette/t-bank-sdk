@@ -1,12 +1,18 @@
+use crate::Password;
+#[cfg(feature = "serde")]
 use crate::{
     AddCardReq, AddCustomerReq, CancelPaymentReq, ChargePaymentReq, ConfirmPaymentReq,
-    ErrorWrapper, GetCardListReq, GetCustomerReq, GetStateReq, InitPaymentReq, Password,
+    ErrorWrapper, GetCardListReq, GetCustomerReq, GetStateReq, InitPaymentReq,
     PaymentNotificationRes, RemoveCardReq, RemoveCustomerReq, ResendNotificationReq,
     SendClosingReceiptReq,
 };
 #[cfg(feature = "serde")]
 use serde::Serialize;
-use std::{collections::BTreeMap, ops::Deref};
+#[cfg(feature = "serde")]
+use sha2::{Digest, Sha256};
+#[cfg(feature = "serde")]
+use std::collections::BTreeMap;
+use std::ops::Deref;
 
 /// Подпись запроса. [Как сформировать.](https://developer.tbank.ru/eacq/intro/developer/token)
 #[derive(Debug)]
@@ -17,19 +23,18 @@ pub struct Token(String);
 #[cfg(feature = "serde")]
 pub struct TokenBuilder(BTreeMap<String, String>);
 
+#[cfg(feature = "serde")]
 impl TokenBuilder {
     fn new() -> Self {
         Self(BTreeMap::new())
     }
 
     /// inserts an entry into the token builder
-    #[cfg(feature = "serde")]
     fn insert<T: Serialize>(&mut self, key: &str, value: &T) {
         self.0.insert(key.to_string(), serialize_token_value(value));
     }
 
     /// inserts value if present
-    #[cfg(feature = "serde")]
     fn insert_opt<T: Serialize>(&mut self, key: &str, value: &Option<T>) {
         if let Some(v) = value {
             self.0.insert(key.to_string(), serialize_token_value(v));
@@ -40,7 +45,8 @@ impl TokenBuilder {
 #[cfg(feature = "serde")]
 impl From<TokenBuilder> for Token {
     fn from(value: TokenBuilder) -> Self {
-        hex::encode(value.0.into_values().collect::<String>().as_bytes()).into()
+        let joined = value.0.into_values().collect::<String>();
+        hex::encode(Sha256::digest(joined.as_bytes())).into()
     }
 }
 
@@ -71,18 +77,19 @@ impl std::fmt::Display for Token {
 /// This wrapper will generate a token for given payload
 ///
 /// It stores the payload + the token that that payload will generate
-#[derive(Debug)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
+#[cfg(feature = "serde")]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "PascalCase")]
 pub struct TokenWrapper<P>
 where
     P: DeriveToken,
 {
     token: Token,
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     payload: P,
 }
 
+#[cfg(feature = "serde")]
 impl<P> TokenWrapper<P>
 where
     P: DeriveToken,

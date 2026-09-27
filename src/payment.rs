@@ -317,22 +317,22 @@ pub struct InitPaymentRes {
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[derive(Debug)]
 pub struct Data {
-    additional_properties: String,
-    operation_initiator_type: OperationInitiatorType,
+    pub additional_properties: String,
+    pub operation_initiator_type: OperationInitiatorType,
     /// Тип устройства:
     ///
     /// SDK — вызов из мобильного приложения,
     /// Desktop — вызов из браузера с десктопа,
     /// Mobile — вызов из браузера с мобильного устройства.
-    device: String,
+    pub device: String,
     /// ОС устройства.
-    device_os: String,
+    pub device_os: String,
     /// Признак открытия в WebView.
-    device_web_view: bool,
+    pub device_web_view: bool,
     /// Браузер.
-    device_browser: String,
+    pub device_browser: String,
     /// Признак проведения операции через T-Pay по API.
-    tinkoff_pay_web: bool,
+    pub tinkoff_pay_web: bool,
 }
 
 /// Requirements: [O, T]
@@ -384,7 +384,7 @@ impl_string_conversions_default!(Language);
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct Shop {
     /// Код магазина. Для параметра ShopСode нужно использовать значение параметра Submerchant_ID, который возвращается в ответе при регистрации магазинов через XML. Если XML не используется, передавать поле не нужно.
-    shop_code: String,
+    pub shop_code: String,
     /// Сумма в копейках.
     ///
     /// Например, 3 руб. 12коп. — это число 312.
@@ -393,9 +393,9 @@ pub struct Shop {
     /// Минимальная сумма операции с помощью СБП составляет 10 руб.
     ///
     /// P.S. I'm not sure anyone will pay more than 42 949 672,96 RUB with this
-    amount: u32,
-    name: Option<String>,
-    fee: Option<String>,
+    pub amount: u32,
+    pub name: Option<String>,
+    pub fee: Option<String>,
 }
 
 impl Shop {
@@ -548,7 +548,7 @@ mod test {
         let expected_token = hex::encode(Sha256::digest(joined.as_bytes()));
 
         let token = payload.derive_token(&password);
-        assert_eq!(serde_json::to_value(&token).unwrap(), expected_token);
+        assert_eq!(token.to_string(), expected_token);
     }
 
     #[test]

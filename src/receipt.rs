@@ -225,18 +225,18 @@ impl ItemFFD105 {
 #[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct ItemFFD12 {
-    agent_data: AgentData,
-    supplier_info: SupplierInfo,
+    pub agent_data: AgentData,
+    pub supplier_info: SupplierInfo,
     /// Requirements: <= 128 characters
     ///
     /// Тег ФФД: 1030
     ///
     /// Наименование товара.
-    name: String,
+    pub name: String,
     /// Тег ФФД: 1079
     ///
     /// Цена в копейках.
-    price: u32,
+    pub price: u32,
     /// Requirements: <= 8 characters
     /// Тег ФФД: 1023
     ///
@@ -244,20 +244,20 @@ pub struct ItemFFD12 {
     ///
     /// целая часть — не больше 5 знаков,
     /// дробная — не больше 3 знаков для Атол и 2 знаков для CloudPayments.
-    quantity: u16,
+    pub quantity: u16,
     /// Requirements: <= 10 characters
     ///
     /// Тег ФФД: 1043
     ///
     /// Стоимость товара в копейках. Произведение Quantity и Price.
-    amount: u32,
-    payment_method: PaymentMethod,
-    payment_object: PaymentObjectFF12,
-    tax: Tax,
+    pub amount: u32,
+    pub payment_method: PaymentMethod,
+    pub payment_object: PaymentObjectFF12,
+    pub tax: Tax,
     /// Тег ФФД: 1191
     ///
     /// Дополнительный реквизит предмета расчета.
-    user_data: String,
+    pub user_data: String,
     /// Тег ФФД: 1229
     ///
     /// Сумма акциза в рублях с учетом копеек, которая включена в стоимость предмета расчета:
@@ -265,29 +265,29 @@ pub struct ItemFFD12 {
     /// целая часть — не больше 8 знаков;
     /// дробная часть — не больше 2 знаков;
     /// значение не может быть отрицательным.
-    excise: String,
+    pub excise: String,
     /// Requirements: <= 3 characters
     ///
     /// Тег ФФД: 1230
     ///
     /// Цифровой код страны происхождения товара в соответствии с Общероссийским  классификатором стран мира — 3 цифры.
-    country_code: String,
+    pub country_code: String,
     /// Requirements: <= 32 characters
     ///
     /// Тег ФФД: 1231
     ///
     /// Номер таможенной декларации.
-    declaration_number: String,
-    measurement_unit: MeasurementUnit,
+    pub declaration_number: String,
+    pub measurement_unit: MeasurementUnit,
     /// Тег ФФД: 2102
     ///
     /// Режим обработки кода маркировки. Должен принимать значение, равное 0.
     ///
     /// обязательной маркировке сканером — соответствующий код в поле paymentObject.
-    mark_processing_mode: String,
-    mark_code: Vec<MarkCode>,
-    mark_quantity: MarkQuantity,
-    sectoral_item_props: SectoralItemProps,
+    pub mark_processing_mode: String,
+    pub mark_code: Vec<MarkCode>,
+    pub mark_quantity: MarkQuantity,
+    pub sectoral_item_props: SectoralItemProps,
 }
 
 impl ItemFFD12 {
@@ -369,14 +369,14 @@ impl ItemFFD12 {
 #[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct AgentData {
-    agent_sign: AgentSign,
-    operation_name: String,
-    phones: Vec<String>,
-    receiver_phones: Vec<String>,
-    transfer_phones: Vec<String>,
-    operator_name: String,
-    operator_address: String,
-    perator_inn: String,
+    pub agent_sign: AgentSign,
+    pub operation_name: String,
+    pub phones: Vec<String>,
+    pub receiver_phones: Vec<String>,
+    pub transfer_phones: Vec<String>,
+    pub operator_name: String,
+    pub operator_address: String,
+    pub operator_inn: String,
 }
 
 impl Default for AgentData {
@@ -389,7 +389,7 @@ impl Default for AgentData {
             transfer_phones: Vec::new(),
             operator_name: String::new(),
             operator_address: String::new(),
-            perator_inn: String::new(),
+            operator_inn: String::new(),
         }
     }
 }
@@ -399,9 +399,9 @@ impl Default for AgentData {
 #[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct SupplierInfo {
-    phones: Vec<String>,
-    name: String,
-    inn: String,
+    pub phones: Vec<String>,
+    pub name: String,
+    pub inn: String,
 }
 
 /// Тег ФФД: 1163
@@ -416,8 +416,8 @@ pub struct SupplierInfo {
 #[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct MarkCode {
-    mark_code_type: MarkCodeType,
-    value: String,
+    pub mark_code_type: MarkCodeType,
+    pub value: String,
 }
 
 /// Реквизит «Дробное количество маркированного товара». Передается, только если расчет осуществляется
@@ -431,8 +431,8 @@ pub struct MarkCode {
 #[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct MarkQuantity {
-    numerator: u32,
-    denominator: u32,
+    pub numerator: u32,
+    pub denominator: u32,
 }
 
 /// Отраслевой реквизит предмета расчета.
@@ -444,19 +444,19 @@ pub struct SectoralItemProps {
     /// Тег ФФД: 1262
     ///
     /// Идентификатор ФОИВ — федеральный орган исполнительной власти.
-    federal_id: String,
+    pub federal_id: String,
     /// Тег ФФД: 1263
     ///
     /// Дата нормативного акта ФОИВ.
-    date: DateTime<Utc>,
+    pub date: DateTime<Utc>,
     /// Тег ФФД: 1264
     ///
     /// Номер нормативного акта ФОИВ.
-    number: String,
+    pub number: String,
     /// Тег ФФД: 1265
     ///
     /// Состав значений, котрые определены нормативным актом ФОИВ.
-    value: String,
+    pub value: String,
 }
 
 /// Детали платежа.
@@ -469,11 +469,11 @@ pub struct SectoralItemProps {
 #[cfg_attr(feature = "serde", serde(rename_all = "PascalCase"))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct Payments {
-    electronic: u32,
-    cash: Option<u32>,
-    advance_payment: Option<u32>,
-    credit: Option<u32>,
-    provision: Option<u32>,
+    pub electronic: u32,
+    pub cash: Option<u32>,
+    pub advance_payment: Option<u32>,
+    pub credit: Option<u32>,
+    pub provision: Option<u32>,
 }
 
 impl Payments {
@@ -530,7 +530,7 @@ impl Payments {
 #[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[strum(serialize_all = "snake_case")]
-enum AgentSign {
+pub enum AgentSign {
     BankPayingAgent,
     BankPayingSubagent,
     #[default]
@@ -561,7 +561,7 @@ impl_string_conversions_default!(AgentSign);
 #[cfg_attr(feature = "serde", serde(rename_all = "UPPERCASE"))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[strum(serialize_all = "UPPERCASE")]
-enum MarkCodeType {
+pub enum MarkCodeType {
     #[default]
     Unknown,
     Ean8,
@@ -761,7 +761,7 @@ impl_string_conversions_default!(PaymentObjectFF105);
 #[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[strum(serialize_all = "snake_case")]
-enum PaymentObjectFF12 {
+pub enum PaymentObjectFF12 {
     #[default]
     Commodity,
     Excise,
@@ -872,7 +872,7 @@ impl_string_conversions_default!(Taxation);
 #[derive(Default, Debug, Display, AsRefStr, EnumString)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-enum DocumentCode {
+pub enum DocumentCode {
     #[default]
     #[cfg_attr(feature = "serde", serde(rename = "21"))]
     #[strum(serialize = "21")]
@@ -945,11 +945,11 @@ impl_string_conversions_default!(FfdVersion);
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct ClientInfo {
-    birthdate: String,
-    citizenship: String,
-    document_code: DocumentCode,
-    document_data: String,
-    address: String,
+    pub birthdate: String,
+    pub citizenship: String,
+    pub document_code: DocumentCode,
+    pub document_data: String,
+    pub address: String,
 }
 
 #[derive(Debug)]
