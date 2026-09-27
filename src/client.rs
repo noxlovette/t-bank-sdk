@@ -140,6 +140,7 @@ impl Deref for Password {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Password(String);
 
 impl Password {

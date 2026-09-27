@@ -284,7 +284,11 @@ pub struct SendClosingReceiptReq {
 }
 
 impl SendClosingReceiptReq {
-    pub fn new(terminal_key: &TerminalKey, payment_id: impl Into<String>, receipt: Receipt) -> Self {
+    pub fn new(
+        terminal_key: &TerminalKey,
+        payment_id: impl Into<String>,
+        receipt: Receipt,
+    ) -> Self {
         Self {
             terminal_key: terminal_key.clone(),
             payment_id: payment_id.into(),

@@ -1,5 +1,6 @@
 use crate::{Receipt, TerminalKey, impl_string_conversions_default};
 use chrono::{DateTime, Duration, Utc};
+use std::ops::Deref;
 use strum::{AsRefStr, Display, EnumString};
 use url::Url;
 
@@ -15,21 +16,36 @@ use url::Url;
 /// the signed token must be computed from the exact same string that ends
 /// up on the wire, not from `serde_json`'s default `DateTime<Utc>` format,
 /// or the request body and its signature disagree and every request fails.
-pub(crate) fn format_redirect_due_date(dt: &DateTime<Utc>) -> String {
-    dt.format("%Y-%m-%dT%H:%M:%S%:z").to_string()
+#[derive(Debug)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+pub struct RedirectDueDate(DateTime<Utc>);
+
+impl From<DateTime<Utc>> for RedirectDueDate {
+    fn from(value: DateTime<Utc>) -> Self {
+        Self(value)
+    }
 }
 
 #[cfg(feature = "serde")]
-fn serialize_redirect_due_date<S>(
-    value: &Option<DateTime<Utc>>,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    match value {
-        Some(dt) => serializer.serialize_str(&format_redirect_due_date(dt)),
-        None => serializer.serialize_none(),
+impl serde::Serialize for RedirectDueDate {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_str(self)
+    }
+}
+
+impl std::fmt::Display for RedirectDueDate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.format("%Y-%m-%dT%H:%M:%S%:z"))
+    }
+}
+
+impl Deref for RedirectDueDate {
+    type Target = DateTime<Utc>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
@@ -108,11 +124,7 @@ pub struct InitPaymentReq {
     /// больше нуля — оно будет установлено в качестве срока жизни ссылки или динамического QR-кода;
     /// меньше нуля — устанавливается значение по умолчанию: 1440 мин. (1 сутки).
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    #[cfg_attr(
-        feature = "serde",
-        serde(serialize_with = "serialize_redirect_due_date")
-    )]
-    pub redirect_due_date: Option<DateTime<Utc>>,
+    pub redirect_due_date: Option<RedirectDueDate>,
     #[cfg(feature = "serde")]
     #[serde(rename = "DATA")]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -185,8 +197,8 @@ impl InitPaymentReq {
     pub fn redirect_due_date(mut self, rdd: DateTime<Utc>) -> Self {
         let delta = rdd - Utc::now();
         // Must be between 1 minute and 90 days from now.
-        let valid = delta > Duration::minutes(1) && delta < Duration::days(90);
-        self.redirect_due_date = valid.then_some(rdd);
+        self.redirect_due_date =
+            (delta > Duration::minutes(1) && delta < Duration::days(90)).then_some(rdd.into());
         self
     }
 
@@ -488,7 +500,7 @@ mod test {
         // `Init` endpoint rejects with a generic `9999` error.
         let dt = Utc.with_ymd_and_hms(2026, 8, 31, 12, 28, 0).unwrap();
         let payload = InitPaymentReq {
-            redirect_due_date: Some(dt),
+            redirect_due_date: Some(dt.into()),
             ..InitPaymentReq::new(&TerminalKey::default(), 1000, "32451")
         };
 
@@ -506,7 +518,7 @@ mod test {
 
         let dt = Utc.with_ymd_and_hms(2026, 8, 31, 12, 28, 0).unwrap();
         let payload = InitPaymentReq {
-            redirect_due_date: Some(dt),
+            redirect_due_date: Some(dt.into()),
             ..InitPaymentReq::new(&TerminalKey::default(), 1000, "32451")
         };
         let password = Password::new("pw").unwrap();
@@ -531,10 +543,11 @@ mod test {
             "TerminalKey",
             wire["TerminalKey"].as_str().unwrap().to_string(),
         );
-        let joined: String = fields.into_values().collect();
-        let expected_token = format!("{:x}", Sha256::digest(joined.as_bytes()));
 
-        let token = payload.create_token(&password);
+        let joined: String = fields.into_values().collect();
+        let expected_token = hex::encode(Sha256::digest(joined.as_bytes()));
+
+        let token = payload.derive_token(&password);
         assert_eq!(serde_json::to_value(&token).unwrap(), expected_token);
     }
 
